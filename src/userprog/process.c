@@ -93,7 +93,10 @@ start_process (void *f_name)
 int
 process_wait (tid_t child_tid UNUSED)
 {
-  while(1);
+  long i;
+  for (i=0; i<100000000; i++) {
+    ;
+  }
   return -1;
 }
 
