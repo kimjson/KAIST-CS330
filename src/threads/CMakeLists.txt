@@ -1,0 +1,1 @@
+add_library(threads thread.c synch.c)

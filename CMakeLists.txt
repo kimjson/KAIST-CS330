@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.6)
+project(PINTOS)
+
+include_directories(src)
+include_directories(src/lib)
+include_directories(src/lib/kernel)
+include_directories(src/lib/user)
+
+add_subdirectory(src/threads)
+add_subdirectory(src/userprog)
+add_subdirectory(src/devices)
+add_subdirectory(src/lib)
+add_subdirectory(src/tests)

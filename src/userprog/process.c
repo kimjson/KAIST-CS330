@@ -495,14 +495,16 @@ push_argument(char *file_name, void **esp) {
   char *arguments[128];
   uint8_t *argument_addresses[128];
   char *token, *save_ptr;
-  uint8_t **old_esp;
-  uint8_t **new_esp;
+  uint8_t *old_esp;
+  uint8_t *new_esp;
   unsigned long num_padding;
+
+  unsigned long written_bytes = 0;
 
   int i;
 
-  new_esp = (uint8_t **)esp;
-  old_esp = (uint8_t **)esp;
+  new_esp = *(uint8_t **)esp;
+  old_esp = *(uint8_t **)esp;
 
   // store tokenized strings
   for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
@@ -513,29 +515,28 @@ push_argument(char *file_name, void **esp) {
 
   // write tokenized strings on stack.
   for (i = argc-1; i > -1; i--) {
-    *new_esp -= strlen(arguments[i]) + 1;
-    memcpy(*new_esp, arguments[i], strlen(arguments[i]));
-    argument_addresses[i] = *new_esp;
+    new_esp -= strlen(arguments[i]) + 1;
+    written_bytes += strlen(arguments[i]) + 1;
+    memcpy(new_esp, arguments[i], strlen(arguments[i]));
+    argument_addresses[i] = new_esp;
   }
 
   // write padding.
-  num_padding = (4 - (*old_esp - *new_esp)) % 4;
-  *new_esp -= num_padding+4;
+  num_padding = (4 - written_bytes) % 4;
+  new_esp -= num_padding+4;
 
   // write tokenized strings' addresses.
   for (i = argc-1; i > -1; i--) {
-    *new_esp -= 4;
-    memcpy(*new_esp, &argument_addresses[i], 4);
+    new_esp -= 4;
+    memcpy(new_esp, &argument_addresses[i], 4);
     //**new_esp = argument_addresses[i];
   }
 
-  *old_esp = *new_esp;
-  *new_esp -= 4;
-  memcpy(*new_esp, old_esp, 4);
-  *new_esp -= 4;
-  memcpy(*new_esp, &argc, 4);
-
-  esp = (void **)new_esp;
+  old_esp = new_esp;
+  new_esp -= 4;
+  memcpy(new_esp, &old_esp, 4);
+  new_esp -= 4;
+  memcpy(new_esp, &argc, 4);
 
   hex_dump((uintptr_t) (PHYS_BASE - 200), (void **) (PHYS_BASE - 200), 200, true);
 }
