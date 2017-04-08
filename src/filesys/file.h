@@ -10,6 +10,9 @@ struct inode;
 /* An open file. */
 struct file
 {
+  int fd;                     /* File descriptor */
+  struct list_elem elem;      /* List elem for file_list(global list) */
+  struct list_elem elem_for_thread;      /* List elem for thread->file_list(global list) */
   struct inode *inode;        /* File's inode. */
   off_t pos;                  /* Current position. */
   bool deny_write;            /* Has file_deny_write() been called? */
