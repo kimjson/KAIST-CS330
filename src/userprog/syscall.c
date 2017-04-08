@@ -285,6 +285,9 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       } else {
         f->eax = (uint32_t)-1;
       }
+    } else if (syscall_number == SYS_EXEC) {
+      char *file = *(char **)(f->esp + 4);
+//      process_execute(file);
     }
   }
 }
