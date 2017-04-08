@@ -144,8 +144,22 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       char *buffer = *(char **)(f->esp + 8 );
       int fd = *(int *)(f->esp + 4);
 
+      if (is_invalid(buffer)) {
+        handle_invalid(f);
+      }
+
       if (fd == 1) {
         putbuf(buffer, size);
+      } else if (fd > 1) {
+        struct file *found_file = find_file_by_fd(fd);
+        if (found_file == NULL || !thread_has_file(fd)) {
+          f->eax = (uint32_t) -1;
+        } else {
+          int result = file_write(found_file, buffer, size);
+          f->eax = (uint32_t)result;
+        }
+      } else {
+        f->eax = (uint32_t) -1;
       }
 
     } else if (syscall_number == SYS_HALT) {
@@ -236,6 +250,9 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       int fd = *(int *)(f->esp + 4);
       char *buffer = *(char **)(f->esp + 8);
       unsigned size = *(unsigned *)(f->esp + 12);
+      if (is_invalid(buffer)) {
+        handle_invalid(f);
+      }
       if (fd == 0) {
         unsigned i;
         for (i=0; i < size; i++) {
@@ -248,6 +265,21 @@ syscall_handler (struct intr_frame *f)// UNUSED)
           f->eax = (uint32_t)-1;
         } else {
           int result = file_read(read_file, buffer, size);
+          f->eax = (uint32_t)result;
+        }
+      } else {
+        f->eax = (uint32_t)-1;
+      }
+    } else if (syscall_number == SYS_FILESIZE) {
+      // Syscall read
+      int fd = *(int *)(f->esp + 4);
+
+      if (fd > 1) {
+        struct file *found_file = find_file_by_fd(fd);
+        if (found_file == NULL || !thread_has_file(fd)) {
+          f->eax = (uint32_t)-1;
+        } else {
+          int result = file_length(found_file);
           f->eax = (uint32_t)result;
         }
       } else {
