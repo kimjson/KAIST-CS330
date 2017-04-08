@@ -122,7 +122,9 @@ process_exit (void)
     curr->pagedir = NULL;
     pagedir_activate (NULL);
     pagedir_destroy (pd);
+
   }
+
 }
 
 /* Sets up the CPU for running user code in the current
@@ -244,6 +246,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   // Get real program name from file_name
   char *token, *save_ptr;
   token = strtok_r(fn_copy, " ", &save_ptr);
+  strlcpy(thread_current()->exec_name, token, strlen(token)+1);
   file = filesys_open (token);
   free(fn_copy);
 
@@ -332,13 +335,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
-
   success = true;
 
-    done:
-  /* We arrive here whether the load is successful or not. */
-  file_close (file);
-  return success;
+  done:
+    /* We arrive here whether the load is successful or not. */
+    file_close (file);
+    return success;
 }
 
 /* load() helpers. */
@@ -508,7 +510,6 @@ push_argument(char *file_name, void **esp) {
 
   // store tokenized strings
   for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
-    printf("token length: %d\n", strlen(token));
     arguments[argc] = token;
     argc++;
   }
@@ -522,8 +523,8 @@ push_argument(char *file_name, void **esp) {
   }
 
   // write padding.
-  num_padding = (4 - written_bytes) % 4;
-  new_esp -= num_padding+4;
+  num_padding = (4 - written_bytes % 4) % 4;
+  new_esp -= (num_padding+4);
 
   // write tokenized strings' addresses.
   for (i = argc-1; i > -1; i--) {
@@ -537,8 +538,12 @@ push_argument(char *file_name, void **esp) {
   memcpy(new_esp, &old_esp, 4);
   new_esp -= 4;
   memcpy(new_esp, &argc, 4);
+  new_esp -= 4;
+  *esp = new_esp;
 
-  hex_dump((uintptr_t) (PHYS_BASE - 200), (void **) (PHYS_BASE - 200), 200, true);
+
+
+  //hex_dump((uintptr_t) (PHYS_BASE - 200), (void **) (PHYS_BASE - 200), 200, true);
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
