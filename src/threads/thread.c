@@ -228,6 +228,7 @@ thread_create (const char *name, int priority,
   t_info->tid = tid;
   t_info->load_success = true;
   t_info->is_waited = false;
+  t_info->is_killed = false;
   sema_init(&t_info->wait_sema, 0);
   sema_init(&t_info->exec_sema, 0);
 

@@ -112,6 +112,7 @@ static void handle_invalid(struct intr_frame *f) {
   int status = -1;
   memcpy(&f->eax, &status, 4);
   printf("%s: exit(%d)\n", thread_current()->exec_name, status);
+  thread_current()->info->is_killed = true;
   thread_exit();
 }
 
@@ -197,7 +198,7 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       }
     } else if (syscall_number == SYS_OPEN) {
       // Open syscall
-
+//      printf("OPEN\n");
       if (is_invalid(f->esp + 4)) {
         handle_invalid(f);
       } else {
@@ -209,10 +210,12 @@ syscall_handler (struct intr_frame *f)// UNUSED)
           lock_acquire(&lock);
           struct file *open_file = filesys_open(file);
           if (open_file != NULL) {
+//            printf("OPEN FILE NOT NULL\n");
             result = give_file_descriptor(open_file);
             list_push_back(&thread_current()->file_list, &open_file->elem_for_thread);
             f->eax = (uint32_t) result;
           } else {
+//            printf("OPEN FILE NULL\n");
             f->eax = (uint32_t) -1;
           }
           lock_release(&lock);
@@ -221,6 +224,7 @@ syscall_handler (struct intr_frame *f)// UNUSED)
     } else if (syscall_number == SYS_REMOVE) {
 
     } else if (syscall_number == SYS_CLOSE) {
+//      printf("CLOSE\n");
       int fd = *(int *)(f->esp + 4);
       struct list_elem *e1, *e2;
 
@@ -233,7 +237,8 @@ syscall_handler (struct intr_frame *f)// UNUSED)
         }
       }
       if (e1 == list_end(&file_list)) {
-        //
+        // file that does not exist
+//        thread_exit();
       }
       for (e2 = list_begin (&thread_current()->file_list); e2 != list_end (&thread_current()->file_list); e2 = list_next (e2))
       {
@@ -244,10 +249,12 @@ syscall_handler (struct intr_frame *f)// UNUSED)
         }
       }
       if (e2 == list_end(&thread_current()->file_list)) {
-        //
+        // file that is not open or owned by current thread.
+//        thread_exit();
       }
     } else if (syscall_number == SYS_READ) {
       // Syscall read
+//      printf("READ\n");
       int fd = *(int *)(f->esp + 4);
       char *buffer = *(char **)(f->esp + 8);
       unsigned size = *(unsigned *)(f->esp + 12);
@@ -280,6 +287,7 @@ syscall_handler (struct intr_frame *f)// UNUSED)
         if (found_file == NULL || !thread_has_file(fd)) {
           f->eax = (uint32_t)-1;
         } else {
+//          printf("NORMAL FILESIZE\n");
           int result = file_length(found_file);
           f->eax = (uint32_t)result;
         }

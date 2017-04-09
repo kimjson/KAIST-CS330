@@ -113,7 +113,8 @@ process_wait (tid_t child_tid)
   if (found_child_info == NULL) {
     return -1;
   } else {
-    if (found_child_info->is_waited) {
+//    printf("IS_KILLED: %d\n", found_child_info->is_killed);
+    if (found_child_info->is_waited || found_child_info->is_killed) {
       return -1;
     }
     found_child_info->is_waited = true;
