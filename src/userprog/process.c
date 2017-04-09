@@ -68,8 +68,8 @@ start_process (void *f_name)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) {
-    thread_current()->load_success = false;
-    sema_up(&thread_current()->wait_sema);
+//    thread_current()->load_success = false;
+//    sema_up(&thread_current()->wait_sema);
     thread_exit();
   }
 

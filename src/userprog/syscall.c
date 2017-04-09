@@ -286,17 +286,23 @@ syscall_handler (struct intr_frame *f)// UNUSED)
         f->eax = (uint32_t)-1;
       }
     } else if (syscall_number == SYS_EXEC) {
-      char *cmd_line = *(char **)(f->esp + 4);
-      pid_t result = process_execute(cmd_line);
-      struct thread *child = find_child_by_tid((tid_t)result);
-      if (child == NULL) {
-        result = -1;
-      } else {
-        sema_down(&child->wait_sema);
-        if (!child->load_success) {
-          result = -1;
-        }
+      if (is_invalid(f->esp + 4)) {
+        handle_invalid(f);
       }
+      char *cmd_line = *(char **)(f->esp + 4);
+      if (is_invalid(cmd_line)) {
+        handle_invalid(f);
+      }
+      pid_t result = process_execute(cmd_line);
+//      struct thread *child = find_child_by_tid((tid_t)result);
+//      if (child == NULL) {
+//        result = -1;
+//      } else {
+//        sema_down(&child->wait_sema);
+//        if (!child->load_success) {
+//          result = -1;
+//        }
+//      }
       f->eax = (uint32_t)result;
     } else if (syscall_number == SYS_WAIT) {
       pid_t pid = *(pid_t *)(f->esp + 4);
