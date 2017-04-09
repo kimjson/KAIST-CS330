@@ -117,7 +117,7 @@ process_wait (tid_t child_tid)
     sema_down(&found_child_info->wait_sema);
 
 
-    struct list_elem *e;
+//    struct list_elem *e;
 //    struct list *child_info_list_of_parent = &thread_current()->parent_thread->child_info_list;
 //    for (e = list_begin (child_info_list_of_parent); e != list_end (child_info_list_of_parent); e = list_next (e))
 //    {

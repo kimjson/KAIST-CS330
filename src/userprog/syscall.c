@@ -134,7 +134,7 @@ syscall_handler (struct intr_frame *f)// UNUSED)
 
         int status = *(int*)(f->esp+4);
 
-        thread_current()->exit_status = status;
+        thread_current()->info->exit_status = status;
         printf("%s: exit(%d)\n", thread_current()->exec_name, status);
 
         thread_exit();
