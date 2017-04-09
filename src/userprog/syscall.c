@@ -136,6 +136,7 @@ syscall_handler (struct intr_frame *f)// UNUSED)
 
         thread_current()->exit_status = status;
         printf("%s: exit(%d)\n", thread_current()->exec_name, status);
+
         thread_exit();
       }
     } else if (syscall_number == SYS_WRITE) {
@@ -289,20 +290,20 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       if (is_invalid(f->esp + 4)) {
         handle_invalid(f);
       }
-      char *cmd_line = *(char **)(f->esp + 4);
+      char *cmd_line = *(char **) (f->esp + 4);
       if (is_invalid(cmd_line)) {
         handle_invalid(f);
       }
       pid_t result = process_execute(cmd_line);
-//      struct thread *child = find_child_by_tid((tid_t)result);
-//      if (child == NULL) {
-//        result = -1;
-//      } else {
-//        sema_down(&child->wait_sema);
-//        if (!child->load_success) {
-//          result = -1;
-//        }
-//      }
+      struct thread *child = find_child_by_tid((tid_t) result);
+      struct thread_info *child_info = find_child_info_by_tid((tid_t) result);
+      if (child != NULL && child_info != NULL) {
+        sema_down(&child->info->exec_sema);
+        //printf("flag1\n");
+        if (!child_info->load_success) {
+          result = -1;
+        }
+      }
       f->eax = (uint32_t)result;
     } else if (syscall_number == SYS_WAIT) {
       pid_t pid = *(pid_t *)(f->esp + 4);

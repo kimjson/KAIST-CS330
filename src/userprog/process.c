@@ -68,8 +68,10 @@ start_process (void *f_name)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) {
-//    thread_current()->load_success = false;
-//    sema_up(&thread_current()->wait_sema);
+
+    struct list_elem *e;
+
+    thread_current()->info->load_success = false;
     thread_exit();
   }
 
@@ -97,17 +99,35 @@ start_process (void *f_name)
 int
 process_wait (tid_t child_tid)
 {
-//  int i;
-//  for (i=0; i<100000000; i++) {
-//    ;
+//  struct thread *found_child = NULL;
+//  found_child = find_child_by_tid(child_tid);
+//  if (found_child == NULL) {
+//    return -1;
+//  } else {
+//    sema_down(&found_child->wait_sema);
+//    return found_child->exit_status;
 //  }
-  struct thread *found_child = NULL;
-  found_child = find_child_by_tid(child_tid);
-  if (found_child == NULL) {
+
+  struct thread_info *found_child_info = NULL;
+  found_child_info = find_child_info_by_tid(child_tid);
+  if (found_child_info == NULL) {
+
     return -1;
   } else {
-    sema_down(&found_child->wait_sema);
-    return found_child->exit_status;
+    sema_down(&found_child_info->wait_sema);
+
+
+    struct list_elem *e;
+//    struct list *child_info_list_of_parent = &thread_current()->parent_thread->child_info_list;
+//    for (e = list_begin (child_info_list_of_parent); e != list_end (child_info_list_of_parent); e = list_next (e))
+//    {
+//      struct thread_info *thread_info = list_entry (e, struct thread_info, elem);
+//      if (thread_info->tid == thread_current()->tid) {
+//        list_remove(e);
+//        break;
+//      }
+//    }
+    return found_child_info->exit_status;
   }
 }
 

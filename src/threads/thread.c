@@ -4,6 +4,7 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -11,6 +12,8 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "malloc.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -117,6 +120,24 @@ struct thread *find_child_by_tid(tid_t tid) {
   }
 }
 
+struct thread_info *find_child_info_by_tid(tid_t tid) {
+  struct list_elem *e;
+  struct thread_info *found_info = NULL;
+  for (e = list_begin (&thread_current()->child_info_list); e != list_end (&thread_current()->child_info_list); e = list_next (e))
+  {
+    struct thread_info *info = list_entry (e, struct thread_info, elem);
+    if (info->tid == tid) {
+      found_info = info;
+      break;
+    }
+  }
+  if (found_info == NULL) {
+    return NULL;
+  } else {
+    return found_info;
+  }
+}
+
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
@@ -202,6 +223,15 @@ thread_create (const char *name, int priority,
   tid = t->tid = allocate_tid ();
   t->parent_thread = thread_current();
   list_push_back(&thread_current()->child_list, &t->child_list_elem);
+
+  struct thread_info *t_info = malloc(sizeof(struct thread_info));
+  t_info->tid = tid;
+  t_info->load_success = true;
+  sema_init(&t_info->wait_sema, 0);
+  sema_init(&t_info->exec_sema, 0);
+
+  list_push_back(&thread_current()->child_info_list, &t_info->elem);
+  t->info = t_info;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -308,7 +338,8 @@ thread_exit (void)
   /* Just set our status to dying and schedule another process.
      We will be destroyed during the call to schedule_tail(). */
   intr_disable ();
-  sema_up(&thread_current()->wait_sema);
+  sema_up(&thread_current()->info->exec_sema);
+  sema_up(&thread_current()->info->wait_sema);
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
@@ -463,10 +494,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-  t->load_success = true;
   list_init(&t->file_list);
   list_init(&t->child_list);
-  sema_init(&t->wait_sema, 0);
+  list_init(&t->child_info_list);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

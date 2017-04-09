@@ -98,11 +98,13 @@ struct thread
     struct list file_list;            /* Files opened by the thread */
     char exec_name[32];               /* Char arr for exiting message. */
     struct list child_list;           /* Child processes(threads) */
+    struct list child_info_list;           /* Child processes(threads) */
     struct thread *parent_thread;     /* Parent process (thread) */
     struct list_elem child_list_elem; /* List elem  for child_list */
     int exit_status;                   /* Process exit status */
-    int load_success;                   /* Process exit status */
-    struct semaphore wait_sema;            /* Sema for wait function */
+//    struct semaphore wait_sema;            /* Sema for wait function */
+
+    struct thread_info *info;
 
 
 #ifdef USERPROG
@@ -113,6 +115,15 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+struct thread_info {
+  tid_t tid;
+  bool load_success;
+  int exit_status;
+  struct semaphore wait_sema;
+  struct semaphore exec_sema;
+  struct list_elem elem;
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -147,5 +158,6 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 struct thread *find_child_by_tid(tid_t tid);
+struct thread_info *find_child_info_by_tid(tid_t tid);
 
 #endif /* threads/thread.h */
