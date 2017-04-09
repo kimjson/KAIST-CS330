@@ -99,6 +99,24 @@ thread_init (void)
   initial_thread->tid = allocate_tid ();
 }
 
+struct thread *find_child_by_tid(tid_t tid) {
+  struct list_elem *e;
+  struct thread *found_child = NULL;
+  for (e = list_begin (&thread_current()->child_list); e != list_end (&thread_current()->child_list); e = list_next (e))
+  {
+    struct thread *thread = list_entry (e, struct thread, child_list_elem);
+    if (thread->tid == tid) {
+      found_child = thread;
+      break;
+    }
+  }
+  if (found_child == NULL) {
+    return NULL;
+  } else {
+    return found_child;
+  }
+}
+
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
@@ -180,7 +198,10 @@ thread_create (const char *name, int priority,
 
   /* Initialize thread. */
   init_thread (t, name, priority);
+
   tid = t->tid = allocate_tid ();
+  t->parent_thread = thread_current();
+  list_push_back(&thread_current()->child_list, &t->child_list_elem);
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -287,6 +308,7 @@ thread_exit (void)
   /* Just set our status to dying and schedule another process.
      We will be destroyed during the call to schedule_tail(). */
   intr_disable ();
+  sema_up(&thread_current()->wait_sema);
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
@@ -441,7 +463,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  t->load_success = true;
   list_init(&t->file_list);
+  list_init(&t->child_list);
+  sema_init(&t->wait_sema, 0);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

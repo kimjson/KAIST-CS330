@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads/malloc.h>
+#include <threads/synch.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -66,8 +67,11 @@ start_process (void *f_name)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success)
-    thread_exit ();
+  if (!success) {
+    thread_current()->load_success = false;
+    sema_up(&thread_current()->wait_sema);
+    thread_exit();
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -91,13 +95,20 @@ start_process (void *f_name)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED)
+process_wait (tid_t child_tid)
 {
-  long i;
-  for (i=0; i<100000000; i++) {
-    ;
+//  int i;
+//  for (i=0; i<100000000; i++) {
+//    ;
+//  }
+  struct thread *found_child = NULL;
+  found_child = find_child_by_tid(child_tid);
+  if (found_child == NULL) {
+    return -1;
+  } else {
+    sema_down(&found_child->wait_sema);
+    return found_child->exit_status;
   }
-  return -1;
 }
 
 /* Free the current process's resources. */
@@ -122,7 +133,6 @@ process_exit (void)
     curr->pagedir = NULL;
     pagedir_activate (NULL);
     pagedir_destroy (pd);
-
   }
 
 }

@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
+#include <stdbool.h>
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -92,9 +94,16 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /* Data structure for project 2 */
     struct list file_list;            /* Files opened by the thread */
+    char exec_name[32];               /* Char arr for exiting message. */
+    struct list child_list;           /* Child processes(threads) */
+    struct thread *parent_thread;     /* Parent process (thread) */
+    struct list_elem child_list_elem; /* List elem  for child_list */
+    int exit_status;                   /* Process exit status */
+    int load_success;                   /* Process exit status */
+    struct semaphore wait_sema;            /* Sema for wait function */
 
-    char exec_name[32];
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -136,5 +145,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+struct thread *find_child_by_tid(tid_t tid);
 
 #endif /* threads/thread.h */
