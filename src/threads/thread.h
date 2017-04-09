@@ -123,6 +123,7 @@ struct thread_info {
   struct semaphore wait_sema;
   struct semaphore exec_sema;
   struct list_elem elem;
+  bool is_waited;
 };
 
 /* If false (default), use round-robin scheduler.

@@ -227,6 +227,7 @@ thread_create (const char *name, int priority,
   struct thread_info *t_info = malloc(sizeof(struct thread_info));
   t_info->tid = tid;
   t_info->load_success = true;
+  t_info->is_waited = false;
   sema_init(&t_info->wait_sema, 0);
   sema_init(&t_info->exec_sema, 0);
 

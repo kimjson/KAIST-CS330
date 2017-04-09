@@ -111,11 +111,13 @@ process_wait (tid_t child_tid)
   struct thread_info *found_child_info = NULL;
   found_child_info = find_child_info_by_tid(child_tid);
   if (found_child_info == NULL) {
-
     return -1;
   } else {
+    if (found_child_info->is_waited) {
+      return -1;
+    }
+    found_child_info->is_waited = true;
     sema_down(&found_child_info->wait_sema);
-
 
 //    struct list_elem *e;
 //    struct list *child_info_list_of_parent = &thread_current()->parent_thread->child_info_list;
