@@ -32,7 +32,6 @@ static void handle_tell(struct intr_frame *);
 static void handle_close(struct intr_frame *);
 
 static struct file *find_file_by_fd(int);
-//struct list file_list;
 struct lock lock;
 
 //static bool fd_less_func(const struct list_elem *a, const struct list_elem *b, void *aux) {

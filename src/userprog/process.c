@@ -304,9 +304,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
   }
 
   // Deny write
+  thread_current()->self_file = file;
   file_deny_write(file);
 
-  //
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;

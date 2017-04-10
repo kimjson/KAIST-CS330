@@ -63,6 +63,8 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+struct lock lock;
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -95,7 +97,6 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
-
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -352,6 +353,8 @@ thread_exit (void)
 //    file_close(f);
   }
 
+  file_close(thread_current()->self_file);
+
   sema_up(&thread_current()->info->exec_sema);
   sema_up(&thread_current()->info->wait_sema);
   thread_current ()->status = THREAD_DYING;
@@ -508,6 +511,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  t->self_file = NULL;
   list_init(&t->file_list);
   list_init(&t->child_list);
   list_init(&t->child_info_list);

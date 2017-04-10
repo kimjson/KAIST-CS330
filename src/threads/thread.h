@@ -102,7 +102,7 @@ struct thread
     struct thread *parent_thread;     /* Parent process (thread) */
     struct list_elem child_list_elem; /* List elem  for child_list */
     int exit_status;                   /* Process exit status */
-//    struct semaphore wait_sema;            /* Sema for wait function */
+    struct file *self_file;            /* executable file of thread itself */
 
     struct thread_info *info;
 
