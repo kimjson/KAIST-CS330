@@ -43,6 +43,7 @@ syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 
+
   // lock init
   lock_init(&lock);
 }
@@ -93,7 +94,6 @@ static void handle_exit(struct intr_frame *f) {
   } else {
 
     int status = *(int*)(f->esp+4);
-
     thread_current()->info->exit_status = status;
     printf("%s: exit(%d)\n", thread_current()->exec_name, status);
 
@@ -212,9 +212,12 @@ static void handle_read(struct intr_frame *f) {
   int fd = *(int *)(f->esp + 4);
   char *buffer = *(char **)(f->esp + 8);
   unsigned size = *(unsigned *)(f->esp + 12);
-  if (is_invalid(buffer)) {
+  if(is_invalid(f->esp+4)||is_invalid(f->esp+8)||is_invalid(f->esp+12)){
     handle_invalid(f);
   }
+//  if (is_invalid(buffer)) {
+//    handle_invalid(f);
+//  }
   lock_acquire(&lock);
   if (fd == 0) {
     unsigned i;
@@ -297,6 +300,7 @@ static void
 syscall_handler (struct intr_frame *f)// UNUSED)
 {
   // memory access validation
+
   if (is_invalid(f->esp)) {
 
     handle_invalid(f);
@@ -304,6 +308,7 @@ syscall_handler (struct intr_frame *f)// UNUSED)
   } else {
     // get syscall number
     int syscall_number = *(int *)(f->esp);
+
     if (syscall_number == SYS_EXIT) {
       handle_exit(f);
     } else if (syscall_number == SYS_WRITE) {

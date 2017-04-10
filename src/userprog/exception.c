@@ -137,6 +137,11 @@ page_fault (struct intr_frame *f)
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
+  printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
+  thread_current()->info->is_killed = true;
+  thread_current()->info->exit_status = -1;
+  thread_exit();
+
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
   intr_enable ();
