@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <filesys/file.h>
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -340,6 +341,17 @@ thread_exit (void)
   /* Just set our status to dying and schedule another process.
      We will be destroyed during the call to schedule_tail(). */
   intr_disable ();
+  // Close all its files
+  struct list_elem *e;
+
+  for (e = list_begin (&thread_current()->file_list); e != list_end (&thread_current()->file_list);
+       e = list_next (e))
+  {
+    struct file *f = list_entry (e, struct file, elem_for_thread);
+    list_remove(&f->elem_for_thread);
+//    file_close(f);
+  }
+
   sema_up(&thread_current()->info->exec_sema);
   sema_up(&thread_current()->info->wait_sema);
   thread_current ()->status = THREAD_DYING;

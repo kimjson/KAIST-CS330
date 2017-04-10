@@ -142,7 +142,7 @@ static void handle_write(struct intr_frame *f) {
     putbuf(buffer, size);
   } else if (fd > 1) {
     struct file *found_file = find_file_by_fd(fd);
-    if (found_file == NULL || !thread_has_file(fd)) {
+    if (found_file == NULL || !thread_has_file(fd) || found_file->deny_write) {
       f->eax = (uint32_t) -1;
     } else {
       int result = file_write(found_file, buffer, size);
@@ -207,7 +207,8 @@ static void handle_open(struct intr_frame *f) {
 }
 
 static void handle_remove(struct intr_frame *f) {
-
+  char *file_name = *(char **)(f->esp + 4);
+  filesys_remove(file_name);
 }
 
 static void handle_close(struct intr_frame *f) {
@@ -310,6 +311,23 @@ static void handle_wait(struct intr_frame *f) {
   f->eax = (uint32_t)result;
 }
 
+static void handle_seek(struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  unsigned position = *(unsigned *)(f->esp + 8);
+  struct file *file = find_file_by_fd(fd);
+  file_seek(file, position);
+}
+
+static void handle_tell(struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  unsigned result;
+  struct file *file = find_file_by_fd(fd);
+  result = (unsigned)file_tell(file);
+  f->eax = result;
+}
+
+
+
 static void
 syscall_handler (struct intr_frame *f)// UNUSED)
 {
@@ -343,6 +361,11 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       handle_exec(f);
     } else if (syscall_number == SYS_WAIT) {
       handle_wait(f);
+    } else if (syscall_number == SYS_SEEK) {
+      handle_seek(f);
+    } else if (syscall_number == SYS_TELL) {
+      handle_tell(f);
     }
   }
 }
+
