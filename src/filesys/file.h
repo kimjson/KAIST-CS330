@@ -18,11 +18,6 @@ struct file
   bool deny_write;            /* Has file_deny_write() been called? */
 };
 
-struct file_name {
-  char name[16];
-  struct list_elem elem;
-};
-
 /* Opening and closing files. */
 struct file *file_open (struct inode *);
 struct file *file_reopen (struct file *);

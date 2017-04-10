@@ -36,12 +36,9 @@ static void handle_tell(struct intr_frame *);
 static void handle_close(struct intr_frame *);
 
 static bool is_duplicate_name(char *);
-static int give_file_descriptor(struct file *);
 static struct file *find_file_by_fd(int);
 static bool thread_has_file(int);
-
-//struct list file_name_list;
-struct list file_list;
+//struct list file_list;
 struct lock lock;
 
 static bool fd_less_func(const struct list_elem *a, const struct list_elem *b, void *aux) {
@@ -52,54 +49,81 @@ void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-  list_init(&file_list);
+//  list_init(&file_list);
 
   // lock init
   lock_init(&lock);
 }
 
-static int give_file_descriptor(struct file *file_pointer) {
-  struct list_elem *e;
-  int fd_temp = 1;
-  for (e = list_begin (&file_list); e != list_end (&file_list); e = list_next (e))
-  {
-    struct file *f = list_entry (e, struct file, elem);
+//int give_file_descriptor(struct file *file_pointer) {
+//  struct list_elem *e;
+//  int fd_temp = 1;
+//
+//  // insert interior
+//  for (e = list_begin (&thread_current()->file_list); e != list_end (&thread_current()->file_list); e = list_next (e))
+//  {
+//    struct file *f = list_entry (e, struct file, elem);
+//
+//    printf("fd_temp: %d\n", fd_temp);
+//    printf("f->fd: %d\n", f->fd);
+//    if (f->fd > fd_temp + 1) {
+//      file_pointer->fd = fd_temp + 1;
+//      list_insert_ordered(&thread_current()->file_list, &(file_pointer->elem_for_thread), &fd_less_func, NULL);
+//      return fd_temp + 1;
+//    }
+//    fd_temp = f->fd;
+//  }
+//
+//  // insert on the back.
+//  file_pointer->fd = fd_temp + 1;
+//  list_push_back(&thread_current()->file_list, &file_pointer->elem_for_thread);
+//  return fd_temp + 1;
+//}
 
-    if (f->fd > fd_temp + 1) {
-      file_pointer->fd = fd_temp + 1;
-      list_insert_ordered(&file_list, &(file_pointer->elem), &fd_less_func, NULL);
-      return fd_temp + 1;
-    }
-    fd_temp = f->fd;
+int give_file_descriptor(struct file *file_pointer) {
+  struct thread *curr = thread_current();
+  struct list_elem *e;
+
+//  for (e = list_begin (&curr->file_list); e != list_end (&curr->file_list);
+//       e = list_next (e))
+//  {
+//    struct file *f = list_entry (e, struct file, elem_for_thread);
+//    printf("FILE DESCRIPTOR: %d\n", f->fd);
+//  }
+  if (list_empty(&curr->file_list)) {
+    file_pointer->fd = 2;
+    list_push_back(&curr->file_list, &file_pointer->elem_for_thread);
+  } else {
+    file_pointer->fd = list_entry(list_back(&curr->file_list), struct file, elem_for_thread)->fd + 1;
+    list_push_back(&curr->file_list, &file_pointer->elem_for_thread);
   }
-  file_pointer->fd = fd_temp + 1;
-  list_push_back(&file_list, &file_pointer->elem);
-  return fd_temp + 1;
+  return file_pointer->fd;
 }
 
 static struct file *find_file_by_fd(int fd) {
   struct list_elem *e;
-  for (e = list_begin (&file_list); e != list_end (&file_list); e = list_next (e))
+  struct thread *curr = thread_current();
+  for (e = list_begin (&curr->file_list); e != list_end (&curr->file_list); e = list_next (e))
   {
-    struct file *f = list_entry (e, struct file, elem);
+    struct file *f = list_entry (e, struct file, elem_for_thread);
     if (f->fd == fd) {
-      return list_entry(e, struct file, elem);
+      return list_entry(e, struct file, elem_for_thread);
     }
   }
   return NULL;
 }
 
-static bool thread_has_file(int fd) {
-  struct list_elem *e;
-  for (e = list_begin (&thread_current()->file_list); e != list_end (&thread_current()->file_list); e = list_next (e))
-  {
-    struct file *f = list_entry (e, struct file, elem_for_thread);
-    if (f->fd == fd) {
-      return true;
-    }
-  }
-  return false;
-}
+//static bool thread_has_file(int fd) {
+//  struct list_elem *e;
+//  for (e = list_begin (&thread_current()->file_list); e != list_end (&thread_current()->file_list); e = list_next (e))
+//  {
+//    struct file *f = list_entry (e, struct file, elem_for_thread);
+//    if (f->fd == fd) {
+//      return true;
+//    }
+//  }
+//  return false;
+//}
 
 static bool is_invalid(void *addr) {
   return addr == NULL || is_kernel_vaddr(addr) || pagedir_get_page (thread_current()->pagedir, addr) == NULL;
@@ -142,12 +166,14 @@ static void handle_write(struct intr_frame *f) {
     putbuf(buffer, size);
   } else if (fd > 1) {
     struct file *found_file = find_file_by_fd(fd);
-    if (found_file == NULL || !thread_has_file(fd) || found_file->deny_write) {
+    lock_acquire(&lock);
+    if (found_file == NULL || found_file->deny_write) {
       f->eax = (uint32_t) -1;
     } else {
       int result = file_write(found_file, buffer, size);
       f->eax = (uint32_t)result;
     }
+    lock_release(&lock);
   } else {
     f->eax = (uint32_t) -1;
   }
@@ -166,6 +192,7 @@ static void handle_create(struct intr_frame *f) {
   unsigned initial_size = *(unsigned *)(f->esp + 8);
   bool result = false;
 
+  lock_acquire(&lock);
   if (is_invalid(file) || strlen(file) == 0) {
     handle_invalid(f);
   } else if (strlen(file) > 14) {
@@ -173,13 +200,11 @@ static void handle_create(struct intr_frame *f) {
   } else if (filesys_open(file) != NULL) {
     f->eax = (uint32_t)result;
   } else {
-    lock_acquire(&lock);
+
     result = filesys_create(file, initial_size);
-    struct file_name *file_name = malloc(sizeof(struct file_name));
-    strlcpy(file_name->name, file, strlen(file)+1);
     f->eax = (uint32_t)result;
-    lock_release(&lock);
   }
+  lock_release(&lock);
 }
 
 static void handle_open(struct intr_frame *f) {
@@ -196,7 +221,6 @@ static void handle_open(struct intr_frame *f) {
       struct file *open_file = filesys_open(file);
       if (open_file != NULL) {
         result = give_file_descriptor(open_file);
-        list_push_back(&thread_current()->file_list, &open_file->elem_for_thread);
         f->eax = (uint32_t) result;
       } else {
         f->eax = (uint32_t) -1;
@@ -208,12 +232,14 @@ static void handle_open(struct intr_frame *f) {
 
 static void handle_remove(struct intr_frame *f) {
   char *file_name = *(char **)(f->esp + 4);
+  lock_acquire(&lock);
   filesys_remove(file_name);
+  lock_release(&lock);
 }
 
 static void handle_close(struct intr_frame *f) {
   int fd = *(int *)(f->esp + 4);
-  struct list_elem *e1, *e2;
+  struct list_elem *e2;
 
 
   for (e2 = list_begin (&thread_current()->file_list); e2 != list_end (&thread_current()->file_list); e2 = list_next (e2))
@@ -229,15 +255,6 @@ static void handle_close(struct intr_frame *f) {
     printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
 
     thread_exit();
-  } else {
-    for (e1 = list_begin (&file_list); e1 != list_end (&file_list); e1 = list_next (e1))
-    {
-      struct file *f = list_entry (e1, struct file, elem);
-      if (f->fd == fd) {
-        list_remove(&f->elem);
-        break;
-      }
-    }
   }
 }
 
@@ -249,6 +266,7 @@ static void handle_read(struct intr_frame *f) {
   if (is_invalid(buffer)) {
     handle_invalid(f);
   }
+  lock_acquire(&lock);
   if (fd == 0) {
     unsigned i;
     for (i=0; i < size; i++) {
@@ -257,7 +275,7 @@ static void handle_read(struct intr_frame *f) {
     f->eax = (uint32_t)i;
   } else if (fd > 1) {
     struct file *read_file = find_file_by_fd(fd);
-    if (read_file == NULL || !thread_has_file(fd)) {
+    if (read_file == NULL) {
       f->eax = (uint32_t)-1;
     } else {
       int result = file_read(read_file, buffer, size);
@@ -266,6 +284,7 @@ static void handle_read(struct intr_frame *f) {
   } else {
     f->eax = (uint32_t)-1;
   }
+  lock_release(&lock);
 }
 
 static void handle_filesize(struct intr_frame *f) {
@@ -274,7 +293,7 @@ static void handle_filesize(struct intr_frame *f) {
 
   if (fd > 1) {
     struct file *found_file = find_file_by_fd(fd);
-    if (found_file == NULL || !thread_has_file(fd)) {
+    if (found_file == NULL) {
       f->eax = (uint32_t)-1;
     } else {
       int result = file_length(found_file);

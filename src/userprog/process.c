@@ -1,4 +1,5 @@
 #include "userprog/process.h"
+#include "userprog/syscall.h"
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
@@ -289,9 +290,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   }
 
-  // Deny write
-  file_deny_write(file);
-
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -304,6 +302,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
     printf ("load: %s: error loading executable\n", file_name);
     goto done;
   }
+
+  // Deny write
+  file_deny_write(file);
+
+  //
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
