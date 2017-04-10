@@ -5,17 +5,13 @@
 #include <filesys/file.h>
 #include <threads/synch.h>
 #include <string.h>
-#include <stdlib.h>
-#include <threads/malloc.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
 #include "devices/input.h"
-#include "lib/kernel/console.h"
 #include "lib/user/syscall.h"
 #include "process.h"
-#include "filesys/file.h"
 
 static void syscall_handler (struct intr_frame *);
 static bool is_invalid(void *);
@@ -35,61 +31,27 @@ static void handle_seek(struct intr_frame *);
 static void handle_tell(struct intr_frame *);
 static void handle_close(struct intr_frame *);
 
-static bool is_duplicate_name(char *);
 static struct file *find_file_by_fd(int);
-static bool thread_has_file(int);
 //struct list file_list;
 struct lock lock;
 
-static bool fd_less_func(const struct list_elem *a, const struct list_elem *b, void *aux) {
-  return list_entry(a,struct file, elem)->fd < list_entry(b,struct file, elem)->fd;
-}
+//static bool fd_less_func(const struct list_elem *a, const struct list_elem *b, void *aux) {
+//  return list_entry(a,struct file, elem)->fd < list_entry(b,struct file, elem)->fd;
+//}
 
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-//  list_init(&file_list);
 
   // lock init
   lock_init(&lock);
 }
 
-//int give_file_descriptor(struct file *file_pointer) {
-//  struct list_elem *e;
-//  int fd_temp = 1;
-//
-//  // insert interior
-//  for (e = list_begin (&thread_current()->file_list); e != list_end (&thread_current()->file_list); e = list_next (e))
-//  {
-//    struct file *f = list_entry (e, struct file, elem);
-//
-//    printf("fd_temp: %d\n", fd_temp);
-//    printf("f->fd: %d\n", f->fd);
-//    if (f->fd > fd_temp + 1) {
-//      file_pointer->fd = fd_temp + 1;
-//      list_insert_ordered(&thread_current()->file_list, &(file_pointer->elem_for_thread), &fd_less_func, NULL);
-//      return fd_temp + 1;
-//    }
-//    fd_temp = f->fd;
-//  }
-//
-//  // insert on the back.
-//  file_pointer->fd = fd_temp + 1;
-//  list_push_back(&thread_current()->file_list, &file_pointer->elem_for_thread);
-//  return fd_temp + 1;
-//}
-
 int give_file_descriptor(struct file *file_pointer) {
   struct thread *curr = thread_current();
   struct list_elem *e;
 
-//  for (e = list_begin (&curr->file_list); e != list_end (&curr->file_list);
-//       e = list_next (e))
-//  {
-//    struct file *f = list_entry (e, struct file, elem_for_thread);
-//    printf("FILE DESCRIPTOR: %d\n", f->fd);
-//  }
   if (list_empty(&curr->file_list)) {
     file_pointer->fd = 2;
     list_push_back(&curr->file_list, &file_pointer->elem_for_thread);
@@ -113,27 +75,15 @@ static struct file *find_file_by_fd(int fd) {
   return NULL;
 }
 
-//static bool thread_has_file(int fd) {
-//  struct list_elem *e;
-//  for (e = list_begin (&thread_current()->file_list); e != list_end (&thread_current()->file_list); e = list_next (e))
-//  {
-//    struct file *f = list_entry (e, struct file, elem_for_thread);
-//    if (f->fd == fd) {
-//      return true;
-//    }
-//  }
-//  return false;
-//}
-
 static bool is_invalid(void *addr) {
   return addr == NULL || is_kernel_vaddr(addr) || pagedir_get_page (thread_current()->pagedir, addr) == NULL;
 }
 
 static void handle_invalid(struct intr_frame *f) {
-  int status = -1;
-  memcpy(&f->eax, &status, 4);
-  printf("%s: exit(%d)\n", thread_current()->exec_name, status);
+  f->eax = (uint32_t)-1;
+  printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
   thread_current()->info->is_killed = true;
+  thread_current()->info->exit_status = -1;
   thread_exit();
 }
 
@@ -344,9 +294,6 @@ static void handle_tell(struct intr_frame *f) {
   result = (unsigned)file_tell(file);
   f->eax = result;
 }
-
-
-
 static void
 syscall_handler (struct intr_frame *f)// UNUSED)
 {
