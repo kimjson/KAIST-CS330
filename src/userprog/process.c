@@ -100,38 +100,19 @@ start_process (void *f_name)
 int
 process_wait (tid_t child_tid)
 {
-//  struct thread *found_child = NULL;
-//  found_child = find_child_by_tid(child_tid);
-//  if (found_child == NULL) {
-//    return -1;
-//  } else {
-//    sema_down(&found_child->wait_sema);
-//    return found_child->exit_status;
-//  }
-
   struct thread_info *found_child_info = NULL;
   found_child_info = find_child_info_by_tid(child_tid);
   if (found_child_info == NULL) {
     return -1;
   } else {
-//    printf("IS_KILLED: %d\n", found_child_info->is_killed);
     if (found_child_info->is_waited || found_child_info->is_killed) {
       return -1;
     }
     found_child_info->is_waited = true;
     sema_down(&found_child_info->wait_sema);
-
-//    struct list_elem *e;
-//    struct list *child_info_list_of_parent = &thread_current()->parent_thread->child_info_list;
-//    for (e = list_begin (child_info_list_of_parent); e != list_end (child_info_list_of_parent); e = list_next (e))
-//    {
-//      struct thread_info *thread_info = list_entry (e, struct thread_info, elem);
-//      if (thread_info->tid == thread_current()->tid) {
-//        list_remove(e);
-//        break;
-//      }
-//    }
-    return found_child_info->exit_status;
+    // harvest
+    int status = found_child_info->exit_status;
+    return status;
   }
 }
 
@@ -379,6 +360,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   done:
     /* We arrive here whether the load is successful or not. */
 //    file_close (file);
+    free(fn_copy2);
     return success;
 }
 

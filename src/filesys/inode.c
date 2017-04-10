@@ -119,8 +119,10 @@ inode_open (disk_sector_t sector)
        e = list_next (e)) 
     {
       inode = list_entry (e, struct inode, elem);
-      if (inode->sector == sector) 
+
+      if (inode->sector == sector)
         {
+
           inode_reopen (inode);
           return inode; 
         }

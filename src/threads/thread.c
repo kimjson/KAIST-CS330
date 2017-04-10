@@ -344,20 +344,30 @@ thread_exit (void)
   intr_disable ();
   // Close all its files
   struct list_elem *e;
+  struct thread *curr = thread_current();
+  int length = list_size(&curr->file_list);
+  int i=0;
+  if(length>0) {
 
-  for (e = list_begin (&thread_current()->file_list); e != list_end (&thread_current()->file_list);
-       e = list_next (e))
-  {
-    struct file *f = list_entry (e, struct file, elem_for_thread);
-    list_remove(&f->elem_for_thread);
-//    file_close(f);
+    e = list_begin(&curr->file_list);
+
+    for (i = 0; i < length; i++) {
+      struct file *f = list_entry (e, struct file, elem_for_thread);
+      list_remove(&f->elem_for_thread);
+      e = list_next(e);
+      file_close(f);
+      if(i==length-1)
+        break;
+    }
   }
+
 
   file_close(thread_current()->self_file);
 
   sema_up(&thread_current()->info->exec_sema);
   sema_up(&thread_current()->info->wait_sema);
   thread_current ()->status = THREAD_DYING;
+
   schedule ();
   NOT_REACHED ();
 }
