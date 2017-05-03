@@ -14,6 +14,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "malloc.h"
+#include "vm/page.h"
 
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -525,6 +526,9 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->file_list);
   list_init(&t->child_list);
   list_init(&t->child_info_list);
+
+  hash_init(&t->sup_page_table, page_hash, page_less, NULL);
+
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

@@ -20,6 +20,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+#include "vm/frame.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -48,6 +49,7 @@ static bool format_filesys;
 
 /* -q: Power off after kernel tasks complete? */
 bool power_off_when_done;
+
 
 static void ram_init (void);
 static void paging_init (void);
@@ -87,6 +89,9 @@ main (void)
   palloc_init ();
   malloc_init ();
   paging_init ();
+
+  /* frame init */
+  frame_init ();
 
   /* Segmentation. */
 #ifdef USERPROG

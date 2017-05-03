@@ -1,1 +1,1 @@
-add_library(kernel list.c)
+add_library(kernel list.c hash.c)

@@ -1,1 +1,1 @@
-add_library(threads thread.c synch.c interrupt.c)
+add_library(threads thread.c synch.c interrupt.c palloc.c)

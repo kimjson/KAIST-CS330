@@ -3,6 +3,7 @@
 
 #include <debug.h>
 #include <list.h>
+#include <hash.h>
 #include <stdint.h>
 #include "threads/synch.h"
 #include <stdbool.h>
@@ -111,6 +112,8 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
+
+    struct hash sup_page_table;          /* supplemental page table */
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

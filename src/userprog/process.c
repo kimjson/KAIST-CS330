@@ -20,6 +20,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/frame.h"
 
 #define MAX_CMD_SIZE 256
 
@@ -445,7 +446,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* Get a page of memory. */
-    uint8_t *kpage = palloc_get_page (PAL_USER);
+    // 여기에 새로 만든 페이지 할당 함수로 대체.
+//    uint8_t *kpage = palloc_get_page (PAL_USER);
+    uint8_t *kpage =  frame_table_allocator (PAL_USER);
     if (kpage == NULL)
       return false;
 
@@ -498,7 +501,8 @@ setup_stack_arg (char *file_name, void **esp)
   uint8_t *kpage;
   bool success = false;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+//  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  kpage = frame_table_allocator (PAL_USER | PAL_ZERO);
   if (kpage != NULL)
   {
     success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
