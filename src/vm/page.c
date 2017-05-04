@@ -1,24 +1,42 @@
+#include "threads/thread.h"
+#include "threads/malloc.h"
 #include "page.h"
 
-//struct hash page_table;
-//
-//void page_init (void) {
-//
-//  hash_init(&page_table, page_hash, page_less, NULL);
-//
-//}
+void
+page_init (void) {
+  return;
+}
 
 unsigned page_hash (const struct hash_elem *p_, void *aux UNUSED) {
 
-  const struct page *p = hash_entry(p_, struct page, hash_elem);
-  return hash_bytes(&p->addr, sizeof p->addr);
+  const struct sup_page_entry *p = hash_entry(p_, struct sup_page_entry , hash_elem);
+  return hash_bytes(&p->upage, sizeof p->upage);
 
 }
 
 bool page_less (const struct hash_elem *a_, const struct hash_elem *b_, void *aux UNUSED) {
 
-  const struct page *a = hash_entry(a_, struct page, hash_elem);
-  const struct page *a = hash_entry(b_, struct page, hash_elem);
+  const struct sup_page_entry *a = hash_entry(a_, struct sup_page_entry, hash_elem);
+  const struct sup_page_entry *b = hash_entry(b_, struct sup_page_entry, hash_elem);
 
-  return a->addr < b->addr;
+  return a->upage < b->upage;
+}
+
+void
+sup_page_entry_create (void *upage, void *kpage) {
+  // store va to pa mapping in sup page table.
+  struct sup_page_entry *sup_pte = (struct sup_page_entry *)malloc(sizeof(struct sup_page_entry));
+  sup_pte->upage = upage;
+  sup_pte->kpage = kpage;
+  hash_insert(&thread_current()->sup_page_table, &sup_pte->hash_elem);
+}
+
+struct sup_page_entry *
+sup_page_table_lookup (const void *upage) {
+  struct sup_page_entry sup_pte;
+  struct hash_elem *e;\
+
+  sup_pte.upage = (void *)upage;
+  e = hash_find(&thread_current()->sup_page_table, &sup_pte.hash_elem);
+  return e != NULL ? hash_entry(e, struct sup_page_entry, hash_elem) : NULL;
 }

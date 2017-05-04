@@ -238,6 +238,8 @@ thread_create (const char *name, int priority,
   list_push_back(&thread_current()->child_info_list, &t_info->elem);
   t->info = t_info;
 
+  hash_init(&t->sup_page_table, page_hash, page_less, NULL);
+
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
   kf->eip = NULL;
@@ -526,8 +528,6 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->file_list);
   list_init(&t->child_list);
   list_init(&t->child_info_list);
-
-  hash_init(&t->sup_page_table, page_hash, page_less, NULL);
 
 }
 

@@ -8,6 +8,7 @@ include_directories(src/lib/user)
 
 add_subdirectory(src/threads)
 add_subdirectory(src/userprog)
+add_subdirectory(src/vm)
 add_subdirectory(src/devices)
 add_subdirectory(src/lib)
 add_subdirectory(src/tests)

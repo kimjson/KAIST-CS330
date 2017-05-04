@@ -21,6 +21,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/frame.h"
+#include "vm/page.h"
+
 
 #define MAX_CMD_SIZE 256
 
@@ -455,7 +457,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     /* Load this page. */
     if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
     {
-      palloc_free_page (kpage);
+//      palloc_free_page (kpage);
+      frame_table_free(kpage);
       return false;
     }
     memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -463,9 +466,12 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     /* Add the page to the process's address space. */
     if (!install_page (upage, kpage, writable))
     {
-      palloc_free_page (kpage);
+      frame_table_free(kpage);
+//      palloc_free_page (kpage);
       return false;
     }
+
+    sup_page_entry_create(upage, kpage);
 
     /* Advance. */
     read_bytes -= page_read_bytes;
@@ -478,24 +484,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp)
-{
-  uint8_t *kpage;
-  bool success = false;
-
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL)
-  {
-    success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-    if (success)
-      *esp = PHYS_BASE;
-    else
-      palloc_free_page (kpage);
-  }
-  return success;
-}
-
-static bool
 setup_stack_arg (char *file_name, void **esp)
 {
   uint8_t *kpage;
@@ -507,15 +495,18 @@ setup_stack_arg (char *file_name, void **esp)
   {
     success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
     if (success) {
+      sup_page_entry_create(((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
       *esp = PHYS_BASE;
       // Push arguments
       push_argument(file_name, esp);
     }
     else
-      palloc_free_page (kpage);
+      frame_table_free(kpage);
+//      palloc_free_page (kpage);
   }
   return success;
 }
+
 static void
 push_argument(char *file_name, void **esp) {
   int argc = 0;

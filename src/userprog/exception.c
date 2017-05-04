@@ -4,6 +4,8 @@
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/palloc.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -137,6 +139,11 @@ page_fault (struct intr_frame *f)
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
+  struct sup_page_entry *sup_pte = sup_page_table_lookup(fault_addr);
+  if (sup_pte != NULL) {
+    f->frame_pointer = sup_pte->kpage;
+    return;
+  }
   printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
   thread_current()->info->is_killed = true;
   thread_current()->info->exit_status = -1;

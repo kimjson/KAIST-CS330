@@ -1,0 +1,1 @@
+add_library(vm frame.c page.c swap.c)
