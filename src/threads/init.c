@@ -21,6 +21,7 @@
 #include "threads/pte.h"
 #include "threads/thread.h"
 #include "vm/frame.h"
+#include "vm/page.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -92,6 +93,7 @@ main (void)
 
   /* frame init */
   frame_init ();
+  page_init ();
 
   /* Segmentation. */
 #ifdef USERPROG

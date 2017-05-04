@@ -1,4 +1,5 @@
 #include <hash.h>
+#include <debug.h>
 
 struct page {
   struct hash_elem hash_elem;

@@ -1,5 +1,6 @@
 #include "frame.h"
 #include "threads/palloc.h"
+#include "threads/synch.h"
 
 struct list frame_table;
 struct lock frame_lock;
@@ -13,7 +14,7 @@ frame_init (void) {
 }
 
 void *
-frame_table_allocator (enum palloc_flags)
+frame_table_allocator (enum palloc_flags flags)
 {
   void *result = palloc_get_multiple (flags, 1);
 
