@@ -72,9 +72,6 @@ start_process (void *f_name)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) {
-
-    struct list_elem *e;
-
     thread_current()->info->load_success = false;
     thread_exit();
   }
@@ -224,7 +221,6 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
 static bool setup_stack_arg (char *file_name, void **esp);
 static void push_argument (char *file_name, void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
