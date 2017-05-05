@@ -28,6 +28,7 @@ sup_page_entry_create (void *upage, void *kpage) {
   struct sup_page_entry *sup_pte = (struct sup_page_entry *)malloc(sizeof(struct sup_page_entry));
   sup_pte->upage = upage;
   sup_pte->kpage = kpage;
+  sup_pte->is_valid = true; //???????
   hash_insert(&thread_current()->sup_page_table, &sup_pte->hash_elem);
 }
 

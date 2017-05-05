@@ -1,0 +1,1 @@
+add_library(devices disk.c timer.c)

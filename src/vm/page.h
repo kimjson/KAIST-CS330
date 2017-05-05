@@ -5,7 +5,7 @@ struct sup_page_entry {
   struct hash_elem hash_elem;
   void *upage;                // user virtual address
   void *kpage;                // kernel virtual address. physical frame is identified by this.
-  struct file *executable;    // executable.
+  bool is_valid;
 };
 
 void page_init (void);

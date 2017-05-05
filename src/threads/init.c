@@ -94,6 +94,7 @@ main (void)
   /* frame init */
   frame_init ();
   page_init ();
+  swap_init ();
 
   /* Segmentation. */
 #ifdef USERPROG

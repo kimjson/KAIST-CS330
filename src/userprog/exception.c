@@ -141,7 +141,7 @@ page_fault (struct intr_frame *f)
 
   struct sup_page_entry *sup_pte = sup_page_table_lookup(fault_addr);
   if (sup_pte != NULL) {
-    f->frame_pointer = sup_pte->kpage;
+    f->eax = (uint32_t)sup_pte->kpage;
     return;
   }
   printf("%s: exit(%d)\n", thread_current()->exec_name, -1);

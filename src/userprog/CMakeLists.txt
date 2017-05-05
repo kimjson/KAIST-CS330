@@ -1,1 +1,1 @@
-add_library(userprog process.c syscall.c pagedir.c)
+add_library(userprog process.c syscall.c pagedir.c exception.c)

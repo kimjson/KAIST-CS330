@@ -6,6 +6,7 @@ struct frame_entry {
   struct thread *using_thread;
   uint32_t *pte;
   void *kpage;
+  void *upage;
 };
 
 void frame_init (void);
