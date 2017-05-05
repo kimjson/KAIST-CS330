@@ -22,6 +22,7 @@
 #include "threads/thread.h"
 #include "vm/frame.h"
 #include "vm/page.h"
+#include "vm/swap.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"

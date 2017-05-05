@@ -2,7 +2,7 @@
 #define THREADS_MALLOC_H
 
 #include <debug.h>
-#include <stddef.h>
+#include <stddef.h>\
 
 void malloc_init (void);
 void *malloc (size_t) __attribute__ ((malloc));

@@ -1,19 +1,21 @@
+#include "threads/malloc.h"
 #include <hash.h>
 #include <lib/debug.h>
 #include <devices/disk.h>
 
-enum
-{
-  CASE_SWAP,
-  CASE_FILESYS,
-  CASE_ZERO
-};
+//enum fault_case
+//{
+//  CASE_SWAP,
+//  CASE_FILESYS,
+//  CASE_ZERO
+//};
+
 struct sup_page_entry {
   struct hash_elem hash_elem;
   void *upage;                // user virtual address
   void *kpage;                // kernel virtual address. physical frame is identified by this.
   bool is_valid;
-  int fault_case;
+  int fault_case;             // 0: case_swap, 1: case_filesys, 2: case_zero
   struct swap_entry *swap_address;
 };
 

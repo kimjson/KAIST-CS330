@@ -1,20 +1,4 @@
 #include "threads/thread.h"
-#include <debug.h>
-#include <stddef.h>
-#include <random.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <filesys/file.h>
-#include "threads/flags.h"
-#include "threads/interrupt.h"
-#include "threads/intr-stubs.h"
-#include "threads/palloc.h"
-#include "threads/switch.h"
-#include "threads/synch.h"
-#include "threads/vaddr.h"
-#include "malloc.h"
-#include "vm/page.h"
 
 #ifdef USERPROG
 #include "userprog/process.h"

@@ -1,5 +1,12 @@
 #include <list.h>
 #include "threads/palloc.h"
+#include <threads/pte.h>
+#include "threads/malloc.h"
+#include "threads/thread.h"
+#include "devices/disk.h"
+#include "swap.h"
+#include "threads/pte.h"
+#include "userprog/pagedir.h"
 
 struct frame_entry {
   struct list_elem list_elem;

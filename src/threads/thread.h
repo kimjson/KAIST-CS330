@@ -5,8 +5,24 @@
 #include <list.h>
 #include <hash.h>
 #include <stdint.h>
-#include "threads/synch.h"
 #include <stdbool.h>
+#include <stddef.h>
+#include <random.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <filesys/file.h>
+#include <debug.h>
+
+#include "synch.h"
+#include "flags.h"
+#include "interrupt.h"
+#include "intr-stubs.h"
+#include "palloc.h"
+#include "switch.h"
+#include "vaddr.h"
+#include "malloc.h"
+#include "vm/page.h"
 
 /* States in a thread's life cycle. */
 enum thread_status

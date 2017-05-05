@@ -161,11 +161,11 @@ page_fault (struct intr_frame *f)
     thread_exit();
   } else {
     switch (sup_pte->fault_case) {
-      case CASE_SWAP:
+      case 0:
         // swap in.
-        
+        f->eax = (uint32_t) swap_in(sup_pte, write);
         break;
-      case CASE_FILESYS:
+      case 1:
         break;
       default:
         break;
