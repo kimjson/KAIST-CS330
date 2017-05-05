@@ -1,4 +1,5 @@
 #include <threads/malloc.h>
+#include <threads/thread.h>
 #include "swap.h"
 #include "threads/synch.h"
 
@@ -18,7 +19,7 @@ void swap_init (void) {
   return;
 }
 
-bool swap_out (struct frame_entry *f) {
+struct swap_entry *swap_out (struct frame_entry *f) {
   struct disk *swap_disk = disk_get(1,1);
   if (swap_disk != NULL) {
     // list iterate and find empty swap slot.
@@ -31,11 +32,15 @@ bool swap_out (struct frame_entry *f) {
       if (!se->is_used) {
         disk_write(swap_disk, se->first_sec_no, f->kpage);
         se->is_used = true;
-        return true;
+        return se;
       }
     }
     lock_release(&swap_lock);
   }
-  return false;
+  return NULL;
+}
+
+void *swap_in (void) {
+
 }
 

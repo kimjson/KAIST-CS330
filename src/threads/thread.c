@@ -367,6 +367,9 @@ thread_exit (void)
 
   file_close(thread_current()->self_file);
 
+  // free its sup_page_table and frames related to it.
+
+
   sema_up(&thread_current()->info->exec_sema);
   sema_up(&thread_current()->info->wait_sema);
   thread_current ()->status = THREAD_DYING;

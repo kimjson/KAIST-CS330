@@ -1,11 +1,20 @@
 #include <hash.h>
 #include <lib/debug.h>
+#include <devices/disk.h>
 
+enum
+{
+  CASE_SWAP,
+  CASE_FILESYS,
+  CASE_ZERO
+};
 struct sup_page_entry {
   struct hash_elem hash_elem;
   void *upage;                // user virtual address
   void *kpage;                // kernel virtual address. physical frame is identified by this.
   bool is_valid;
+  int fault_case;
+  struct swap_entry *swap_address;
 };
 
 void page_init (void);

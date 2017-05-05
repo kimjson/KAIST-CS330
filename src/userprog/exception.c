@@ -1,11 +1,13 @@
 #include "userprog/exception.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <threads/vaddr.h>
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/palloc.h"
 #include "vm/page.h"
+#include "vm/swap.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -139,20 +141,6 @@ page_fault (struct intr_frame *f)
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-  struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
-  if (sup_pte != NULL) {
-    f->eax = (uint32_t)sup_pte->kpage;
-    return;
-  } else if (sup_pte->is_valid) {
-    // swap in
-
-  } else {
-    printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
-    thread_current()->info->is_killed = true;
-    thread_current()->info->exit_status = -1;
-    thread_exit();
-  }
-
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
   intr_enable ();
@@ -165,14 +153,33 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
+  struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
+  if (sup_pte == NULL || is_kernel_vaddr(fault_addr) || !not_present) {
+    printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
+    thread_current()->info->is_killed = true;
+    thread_current()->info->exit_status = -1;
+    thread_exit();
+  } else {
+    switch (sup_pte->fault_case) {
+      case CASE_SWAP:
+        // swap in.
+        
+        break;
+      case CASE_FILESYS:
+        break;
+      default:
+        break;
+    }
+  }
+
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-          fault_addr,
-          not_present ? "not present" : "rights violation",
-          write ? "writing" : "reading",
-          user ? "user" : "kernel");
-  kill (f);
+//  printf ("Page fault at %p: %s error %s page in %s context.\n",
+//          fault_addr,
+//          not_present ? "not present" : "rights violation",
+//          write ? "writing" : "reading",
+//          user ? "user" : "kernel");
+//  kill (f);
 }
 
