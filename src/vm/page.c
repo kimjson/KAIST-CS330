@@ -33,11 +33,11 @@ sup_page_entry_create (void *upage, void *kpage) {
 }
 
 struct sup_page_entry *
-sup_page_table_lookup (const void *upage) {
+sup_page_table_lookup (struct hash *sup_page_table, const void *upage) {
   struct sup_page_entry sup_pte;
-  struct hash_elem *e;\
+  struct hash_elem *e;
 
   sup_pte.upage = (void *)upage;
-  e = hash_find(&thread_current()->sup_page_table, &sup_pte.hash_elem);
+  e = hash_find(sup_page_table, &sup_pte.hash_elem);
   return e != NULL ? hash_entry(e, struct sup_page_entry, hash_elem) : NULL;
 }

@@ -257,7 +257,7 @@ active_pd (void)
    directory.  (If PD is not active then its entries are not in
    the TLB, so there is no need to invalidate anything.) */
 static void
-invalidate_pagedir (uint32_t *pd) 
+invalidate_pagedir (uint32_t *pd) \
 {
   if (active_pd () == pd) 
     {

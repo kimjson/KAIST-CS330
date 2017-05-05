@@ -12,4 +12,4 @@ void page_init (void);
 unsigned page_hash (const struct hash_elem *p_, void *aux UNUSED);
 bool page_less (const struct hash_elem *a_, const struct hash_elem *b_, void *aux UNUSED);
 void sup_page_entry_create (void *upage, void *kpage);
-struct sup_page_entry * sup_page_table_lookup (const void *upage);
+struct sup_page_entry * sup_page_table_lookup (struct hash *sup_page_table, const void *upage);

@@ -139,15 +139,19 @@ page_fault (struct intr_frame *f)
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-  struct sup_page_entry *sup_pte = sup_page_table_lookup(fault_addr);
+  struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
   if (sup_pte != NULL) {
     f->eax = (uint32_t)sup_pte->kpage;
     return;
+  } else if (sup_pte->is_valid) {
+    // swap in
+
+  } else {
+    printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
+    thread_current()->info->is_killed = true;
+    thread_current()->info->exit_status = -1;
+    thread_exit();
   }
-  printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
-  thread_current()->info->is_killed = true;
-  thread_current()->info->exit_status = -1;
-  thread_exit();
 
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
