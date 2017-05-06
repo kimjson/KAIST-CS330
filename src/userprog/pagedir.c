@@ -190,6 +190,24 @@ pagedir_set_dirty (uint32_t *pd, const void *vpage, bool dirty)
     }
 }
 
+/* Set the dirty bit to DIRTY in the PTE for virtual page VPAGE
+   in PD. */
+void
+pagedir_set_rw (uint32_t *pd, const void *vpage, bool rw)
+{
+  uint32_t *pte = lookup_page (pd, vpage, false);
+  if (pte != NULL)
+    {
+      if (rw)
+        *pte |= PTE_W;
+      else
+        {
+          *pte &= ~(uint32_t) PTE_W;
+          invalidate_pagedir (pd);
+        }
+    }
+}
+
 /* Returns true if the PTE for virtual page VPAGE in PD has been
    accessed recently, that is, between the time the PTE was
    installed and the last time it was cleared.  Returns false if

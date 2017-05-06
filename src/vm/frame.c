@@ -18,22 +18,18 @@ frame_table_allocator (enum palloc_flags flags)
   sema_down(&frame_sema);
   void *result = palloc_get_multiple (flags, 1);
   if (result == NULL) {
-    printf("flag22222\n");
     // physical memory full, swap in(?) and out
     struct frame_entry *victim_f = list_entry(list_pop_front(&frame_table), struct frame_entry, list_elem);
+
     // printf("calling_vaddr:%d\n",victim_f->upage);
     swap_out(victim_f);
     result = palloc_get_multiple(flags, 1);
   }
-  printf("flag33333\n");
   struct frame_entry *f = (struct frame_entry *)malloc(sizeof(struct frame_entry));
   f->using_thread = thread_current();
   f->kpage = result;
   list_push_back(&frame_table, &f->list_elem);
   sema_up(&frame_sema);
-
-  printf("frame_allocate_end\n");
-  printf("result:0x%08x\n",result);
   return result;
 }
 

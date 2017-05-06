@@ -26,12 +26,12 @@ void swap_init (void) {
 }
 
 void swap_out (struct frame_entry *f) {
-  printf("swap out start\n");
 
   sema_down(&swap_sema);
   // struct sup_page_entry *sup_pte = sup_page_table_lookup(&f->using_thread->sup_page_table, pte_get_page (*f->pte));
 
   struct sup_page_entry *sup_pte = sup_page_table_lookup(&f->using_thread->sup_page_table, f->upage);
+
 
   struct disk *swap_disk = disk_get(1,1);
   if (swap_disk != NULL) {
@@ -54,23 +54,18 @@ void swap_out (struct frame_entry *f) {
       }
     }
     // update supplementary page table using pte.h static inline void *pte_get_page (uint32_t pte)
-    sup_pte->kpage = NULL;
-    //*f->pte &= 0xfffffffe;
+    pagedir_clear_page(f->using_thread->pagedir, f->upage);
     palloc_free_page(f->kpage);
     free(f);
   }
-  sema_up(&swap_sema);
 
-  printf("sema_up in swap_out\n");
+  sema_up(&swap_sema);
 }
 
 void swap_in (struct sup_page_entry *sup_pte, bool writable) {
-  printf("swap_in start\n");
   void *kpage = frame_table_allocator(PAL_USER);
 
   sema_down(&swap_sema);
-
-
   struct disk *swap_disk = disk_get(1,1);
   if (swap_disk != NULL) {
     disk_sector_t i;
@@ -79,10 +74,8 @@ void swap_in (struct sup_page_entry *sup_pte, bool writable) {
         disk_read(swap_disk, sup_pte->swap_address->first_sec_no + i, (uint8_t *)kpage+i*DISK_SECTOR_SIZE);
       }
     sup_pte->swap_address->is_used = false;
-    pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, writable);
-
     sup_pte->fault_case = CASE_ZERO;
   }
+  pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, writable);
   sema_up(&swap_sema);
-  printf("swap_in end\n");
 }

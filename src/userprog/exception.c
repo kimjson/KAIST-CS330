@@ -154,24 +154,26 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  printf("page fault start\n");
-
-  debug_backtrace();
-
+  // printf("fault address: 0x%08x\n", fault_addr);
+  // printf("not present: %d\n", not_present);
+  // printf("write1: %d\n", write);
 
   if (is_kernel_vaddr(fault_addr) || !not_present) {
     printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
+
+    uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
+    // printf("present bit: %d\n", paddr & PTE_P);
+    // printf("mode bit: %d\n", paddr & PTE_W);
+    // printf("owner bit: %d\n", paddr & PTE_U);
+    // printf("write: %d\n", write);
     thread_current()->info->is_killed = true;
     thread_current()->info->exit_status = -1;
     thread_exit();
   } else {
-    printf("fault_addr: 0x%08x\n", fault_addr);
     struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, pg_round_down(fault_addr));
-    //printf("sup_pte as argument to swap_in: %u\n", sup_pte);
-    swap_in(sup_pte, write);
-  }
+    swap_in(sup_pte, not_present);
 
-  printf("page fault end\n");
+  }
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
