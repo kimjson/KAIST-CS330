@@ -1,4 +1,5 @@
 #include "frame.h"
+#include "swap.h"
 
 struct lock frame_lock;
 struct list frame_table;

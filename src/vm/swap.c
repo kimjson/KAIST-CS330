@@ -4,16 +4,19 @@
 #include <threads/pte.h>
 #include "swap.h"
 #include "threads/synch.h"
+#include "page.h"
+#include <stdio.h>
 
 struct list swap_table;
 struct lock swap_lock;
 
 void swap_init (void) {
 
+  disk_sector_t i;
   struct disk *swap_disk = disk_get(1,1);
   lock_init(&swap_lock);
   list_init(&swap_table);
-  for (disk_sector_t i = 0; i < swap_disk->capacity; i += 8) {
+  for (i = 0; i < disk_size(swap_disk); i += 8) {
     struct swap_entry *se = (struct swap_entry *) malloc(sizeof(struct swap_entry));
     se->is_used = false;
     se->first_sec_no = i;
@@ -21,7 +24,7 @@ void swap_init (void) {
   return;
 }
 
-struct swap_entry *swap_out (struct frame_entry *f) {
+void swap_out (struct frame_entry *f) {
   struct hash sup_page_table = f->using_thread->sup_page_table;
   struct sup_page_entry *sup_pte = sup_page_table_lookup(&sup_page_table, pte_get_page (*f->pte));
   if (pagedir_is_dirty(f->using_thread->pagedir, f->upage)) {
@@ -64,4 +67,3 @@ void *swap_in (struct sup_page_entry *sup_pte, bool writable) {
   }
   return NULL;
 }
-

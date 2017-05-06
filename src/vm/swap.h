@@ -1,5 +1,8 @@
-#include "page.h"
+#ifndef _SWAP_H_
+#define _SWAP_H_
+
 #include "devices/disk.h"
+#include "vm/frame.h"
 #include <list.h>
 
 struct swap_entry {
@@ -10,5 +13,7 @@ struct swap_entry {
 };
 
 void swap_init (void);
-struct swap_entry *swap_out (struct frame_entry *f);
+void swap_out (struct frame_entry *f);
 void *swap_in (struct sup_page_entry *sup_pte, bool writable);
+
+#endif

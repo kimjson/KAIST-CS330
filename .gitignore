@@ -49,3 +49,5 @@ fabric.properties
 build
 cmake-build-debug
 .idea/
+.ftpconfig
+.ftpignore
