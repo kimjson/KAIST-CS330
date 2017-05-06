@@ -1,40 +1,45 @@
 #include "frame.h"
 #include "swap.h"
 
-struct lock frame_lock;
+struct semaphore frame_sema;
 struct list frame_table;
 
 void
 frame_init (void) {
 
   list_init(&frame_table);
-  lock_init(&frame_lock);
+  sema_init(&frame_sema, 1);
 
 }
 
 void *
 frame_table_allocator (enum palloc_flags flags)
 {
+  sema_down(&frame_sema);
   void *result = palloc_get_multiple (flags, 1);
-
   if (result == NULL) {
+    printf("flag22222\n");
     // physical memory full, swap in(?) and out
     struct frame_entry *victim_f = list_entry(list_pop_front(&frame_table), struct frame_entry, list_elem);
+    // printf("calling_vaddr:%d\n",victim_f->upage);
     swap_out(victim_f);
     result = palloc_get_multiple(flags, 1);
   }
+  printf("flag33333\n");
   struct frame_entry *f = (struct frame_entry *)malloc(sizeof(struct frame_entry));
   f->using_thread = thread_current();
   f->kpage = result;
-  lock_acquire(&frame_lock);
   list_push_back(&frame_table, &f->list_elem);
-  lock_release(&frame_lock);
+  sema_up(&frame_sema);
 
+  printf("frame_allocate_end\n");
+  printf("result:0x%08x\n",result);
   return result;
 }
 
 void
 frame_table_free (void *page) {
+  sema_down(&frame_sema);
   struct list_elem *e;
 
   for (e = list_begin (&frame_table); e != list_end (&frame_table);
@@ -45,22 +50,25 @@ frame_table_free (void *page) {
       list_remove(&f->list_elem);
       palloc_free_multiple(page, 1);
       free(f);
-      return;
+      break;
     }
   }
+  sema_up(&frame_sema);
 }
 
 void
-frame_entry_set_pte (void *kpage, uint32_t *pte) {
+frame_entry_set_pte (void *upage, void *kpage, uint32_t *pte) {
+  sema_down(&frame_sema);
   struct list_elem *e;
   for (e = list_begin (&frame_table); e != list_end (&frame_table);
        e = list_next (e))
   {
     struct frame_entry *f = list_entry (e, struct frame_entry, list_elem);
     if (f->kpage == kpage) {
-//      *pte = *pte | PTE_P;
       f->pte = pte;
-      return;
+      f->upage = upage;
+      break;
     }
   }
+  sema_up(&frame_sema);
 }

@@ -132,6 +132,7 @@ page_fault (struct intr_frame *f)
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
 
+
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction
@@ -153,19 +154,10 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  printf("fault_addr: %u\n", fault_addr);
-  printf("stack pointer: %u\n", f->esp);
-  // printf("not_present: %d\n", not_present);
-  // printf("write: %d\n", write);
-  // printf("user: %d\n", user);
-  // printf("is_kernel_vaddr: %d\n", is_kernel_vaddr(fault_addr));
+  printf("page fault start\n");
 
-  if (fault_addr == (f->esp) + 8) {
-    printf("i am here\n");
-    // stack growth
-    grow_stack(fault_addr);
-    return;
-  }
+  debug_backtrace();
+
 
   if (is_kernel_vaddr(fault_addr) || !not_present) {
     printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
@@ -173,30 +165,13 @@ page_fault (struct intr_frame *f)
     thread_current()->info->exit_status = -1;
     thread_exit();
   } else {
-    struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
-    if (sup_pte != NULL) {
-      switch (sup_pte->fault_case) {
-        case CASE_SWAP:
-          printf("CASE_SWAP\n");
-          // swap in.
-          swap_in(sup_pte, write);
-          break;
-        case CASE_FILESYS:
-          printf("CASE_FILESYS\n");
-          break;
-        default:
-          printf("DEFAULT\n");
-          break;
-      }
-    } else {
-      struct swap_entry *se = find_swap_by_upage(fault_addr);
-      printf("se: %d\n", se);
-      if (se != NULL) {
-        disk_read(disk_get(1,1), se->first_sec_no, pagedir_get_page(&thread_current()->pagedir, fault_addr));
-        se->is_used = false;
-      }
-    }
+    printf("fault_addr: 0x%08x\n", fault_addr);
+    struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, pg_round_down(fault_addr));
+    //printf("sup_pte as argument to swap_in: %u\n", sup_pte);
+    swap_in(sup_pte, write);
   }
+
+  printf("page fault end\n");
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to

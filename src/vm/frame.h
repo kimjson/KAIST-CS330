@@ -21,6 +21,6 @@ struct frame_entry {
 void frame_init (void);
 void *frame_table_allocator (enum palloc_flags flags);
 void frame_table_free (void *page);
-void frame_entry_set_pte (void *kpage, uint32_t *pte);
+void frame_entry_set_pte (void *upage, void *kpage, uint32_t *pte);
 
 #endif

@@ -443,13 +443,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* Get a page of memory. */
-    if (page_read_bytes == PGSIZE) {
-
-    } else if (page_zero_bytes == PGSIZE) {
-
-    } else {
-
-    }
+    // if (page_read_bytes == PGSIZE) {
+    //
+    // } else if (page_zero_bytes == PGSIZE) {
+    //
+    // } else {
+    //
+    // }
     uint8_t *kpage =  frame_table_allocator (PAL_USER);
     if (kpage == NULL)
       return false;
@@ -468,6 +468,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       frame_table_free(kpage);
       return false;
     }
+
+    //printf("upage: %u\n", upage);
+    //printf("kpage: %u\n", kpage);
 
     sup_page_entry_create(upage, kpage);
 
