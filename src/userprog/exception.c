@@ -160,9 +160,11 @@ page_fault (struct intr_frame *f)
   // printf("user: %d\n", user);
   // printf("is_kernel_vaddr: %d\n", is_kernel_vaddr(fault_addr));
 
-  if (fault_addr - (f->esp) < ) {
+  if (fault_addr == (f->esp) + 8) {
+    printf("i am here\n");
     // stack growth
-    
+    grow_stack(fault_addr);
+    return;
   }
 
   if (is_kernel_vaddr(fault_addr) || !not_present) {

@@ -503,6 +503,24 @@ setup_stack_arg (char *file_name, void **esp)
   return success;
 }
 
+bool grow_stack (void **esp)
+{
+  uint8_t *kpage;
+  bool success = false;
+
+  kpage = frame_table_allocator (PAL_USER | PAL_ZERO);
+  if (kpage != NULL)
+  {
+    success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+    if (success) {
+      sup_page_entry_create(((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
+    }
+    else
+      frame_table_free(kpage);
+  }
+  return success;
+}
+
 static void
 push_argument(char *file_name, void **esp) {
   int argc = 0;
@@ -552,7 +570,7 @@ push_argument(char *file_name, void **esp) {
   memcpy(new_esp, &argc, 4);
   new_esp -= 4;
   *esp = new_esp;
-  
+
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
