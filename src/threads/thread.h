@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <filesys/file.h>
 #include <debug.h>
-
 #include "synch.h"
 #include "flags.h"
 #include "interrupt.h"
@@ -22,7 +21,6 @@
 #include "switch.h"
 #include "vaddr.h"
 #include "malloc.h"
-#include "vm/page.h"
 
 /* States in a thread's life cycle. */
 enum thread_status

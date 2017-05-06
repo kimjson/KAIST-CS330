@@ -8,6 +8,7 @@
 #include "threads/palloc.h"
 #include "vm/page.h"
 #include "vm/swap.h"
+#include "vm/frame.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -31,7 +32,7 @@ static void page_fault (struct intr_frame *);
    Refer to [IA32-v3a] section 5.15 "Exception and Interrupt
    Reference" for a description of each of these exceptions. */
 void
-exception_init (void) 
+exception_init (void)
 {
   /* These exceptions can be raised explicitly by a user program,
      e.g. via the INT, INT3, INTO, and BOUND instructions.  Thus,
@@ -66,14 +67,14 @@ exception_init (void)
 
 /* Prints exception statistics. */
 void
-exception_print_stats (void) 
+exception_print_stats (void)
 {
   printf ("Exception: %lld page faults\n", page_fault_cnt);
 }
 
 /* Handler for an exception (probably) caused by a user process. */
 static void
-kill (struct intr_frame *f) 
+kill (struct intr_frame *f)
 {
   /* This interrupt is one (probably) caused by a user process.
      For example, the process might have tried to access unmapped
@@ -102,7 +103,7 @@ kill (struct intr_frame *f)
          here.)  Panic the kernel to make the point.  */
       intr_dump_frame (f);
 
-      PANIC ("Kernel bug - unexpected interrupt in kernel"); 
+      PANIC ("Kernel bug - unexpected interrupt in kernel");
 
     default:
       /* Some other code segment?  Shouldn't happen.  Panic the
@@ -125,7 +126,7 @@ kill (struct intr_frame *f)
    description of "Interrupt 14--Page Fault Exception (#PF)" in
    [IA32-v3a] section 5.15 "Exception and Interrupt Reference". */
 static void
-page_fault (struct intr_frame *f) 
+page_fault (struct intr_frame *f)
 {
   bool not_present;  /* True: not-present page, false: writing r/o page. */
   bool write;        /* True: access was write, false: access was read. */
@@ -161,11 +162,11 @@ page_fault (struct intr_frame *f)
     thread_exit();
   } else {
     switch (sup_pte->fault_case) {
-      case 0:
+      case CASE_SWAP:
         // swap in.
-        f->eax = (uint32_t) swap_in(sup_pte, write);
+        f->eax = swap_in(sup_pte, write);
         break;
-      case 1:
+      case CASE_FILESYS:
         break;
       default:
         break;
@@ -182,4 +183,3 @@ page_fault (struct intr_frame *f)
 //          user ? "user" : "kernel");
 //  kill (f);
 }
-
