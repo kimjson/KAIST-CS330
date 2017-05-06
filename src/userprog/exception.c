@@ -153,22 +153,46 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
-  if (sup_pte == NULL || is_kernel_vaddr(fault_addr) || !not_present) {
+  printf("fault_addr: %u\n", fault_addr);
+  printf("stack pointer: %u\n", f->esp);
+  // printf("not_present: %d\n", not_present);
+  // printf("write: %d\n", write);
+  // printf("user: %d\n", user);
+  // printf("is_kernel_vaddr: %d\n", is_kernel_vaddr(fault_addr));
+
+  if (fault_addr - (f->esp) < ) {
+    // stack growth
+    
+  }
+
+  if (is_kernel_vaddr(fault_addr) || !not_present) {
     printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
     thread_current()->info->is_killed = true;
     thread_current()->info->exit_status = -1;
     thread_exit();
   } else {
-    switch (sup_pte->fault_case) {
-      case CASE_SWAP:
-        // swap in.
-        f->eax = (uint32_t) swap_in(sup_pte, write);
-        break;
-      case CASE_FILESYS:
-        break;
-      default:
-        break;
+    struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
+    if (sup_pte != NULL) {
+      switch (sup_pte->fault_case) {
+        case CASE_SWAP:
+          printf("CASE_SWAP\n");
+          // swap in.
+          swap_in(sup_pte, write);
+          break;
+        case CASE_FILESYS:
+          printf("CASE_FILESYS\n");
+          break;
+        default:
+          printf("DEFAULT\n");
+          break;
+      }
+    } else {
+      struct swap_entry *se = find_swap_by_upage(fault_addr);
+      printf("se: %d\n", se);
+      if (se != NULL) {
+        disk_read(disk_get(1,1), se->first_sec_no, pagedir_get_page(&thread_current()->pagedir, fault_addr));
+        se->is_used = false;
+      }
     }
   }
 

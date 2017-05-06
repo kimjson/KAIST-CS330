@@ -358,7 +358,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   done:
     /* We arrive here whether the load is successful or not. */
-//    file_close (file);
     free(fn_copy2);
     return success;
 }
@@ -444,8 +443,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* Get a page of memory. */
-    // 여기에 새로 만든 페이지 할당 함수로 대체.
-//    uint8_t *kpage = palloc_get_page (PAL_USER);
+    if (page_read_bytes == PGSIZE) {
+
+    } else if (page_zero_bytes == PGSIZE) {
+
+    } else {
+
+    }
     uint8_t *kpage =  frame_table_allocator (PAL_USER);
     if (kpage == NULL)
       return false;
@@ -453,7 +457,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     /* Load this page. */
     if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
     {
-//      palloc_free_page (kpage);
       frame_table_free(kpage);
       return false;
     }
@@ -463,7 +466,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     if (!install_page (upage, kpage, writable))
     {
       frame_table_free(kpage);
-//      palloc_free_page (kpage);
       return false;
     }
 
@@ -485,7 +487,6 @@ setup_stack_arg (char *file_name, void **esp)
   uint8_t *kpage;
   bool success = false;
 
-//  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   kpage = frame_table_allocator (PAL_USER | PAL_ZERO);
   if (kpage != NULL)
   {
@@ -498,7 +499,6 @@ setup_stack_arg (char *file_name, void **esp)
     }
     else
       frame_table_free(kpage);
-//      palloc_free_page (kpage);
   }
   return success;
 }
@@ -552,10 +552,7 @@ push_argument(char *file_name, void **esp) {
   memcpy(new_esp, &argc, 4);
   new_esp -= 4;
   *esp = new_esp;
-
-
-
-//  hex_dump((uintptr_t) (PHYS_BASE - 200), (void **) (PHYS_BASE - 200), 200, true);
+  
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel

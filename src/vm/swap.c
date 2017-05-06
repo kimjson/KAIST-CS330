@@ -16,11 +16,14 @@ void swap_init (void) {
   struct disk *swap_disk = disk_get(1,1);
   lock_init(&swap_lock);
   list_init(&swap_table);
+  lock_acquire(&swap_lock);
   for (i = 0; i < disk_size(swap_disk); i += 8) {
     struct swap_entry *se = (struct swap_entry *) malloc(sizeof(struct swap_entry));
     se->is_used = false;
     se->first_sec_no = i;
+    list_push_back(&swap_table, &se->list_elem);
   }
+  lock_release(&swap_lock);
   return;
 }
 
@@ -40,7 +43,9 @@ void swap_out (struct frame_entry *f) {
         if (!se->is_used) {
           disk_write(swap_disk, se->first_sec_no, f->kpage);
           se->is_used = true;
+          se->upage = f->upage;
           sup_pte->swap_address = se;
+          sup_pte->fault_case = CASE_SWAP;
           break;
         }
       }
@@ -63,7 +68,22 @@ void *swap_in (struct sup_page_entry *sup_pte, bool writable) {
     sup_pte->swap_address->is_used = false;
     lock_release(&swap_lock);
     pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, writable);
+    sup_pte->fault_case = CASE_ZERO;
     return kpage;
   }
   return NULL;
+}
+
+struct swap_entry *find_swap_by_upage(void *upage) {
+  lock_acquire(&swap_lock);
+  struct list_elem *e;
+  for (e = list_begin (&swap_table); e != list_end (&swap_table);
+       e = list_next (e))
+  {
+    struct swap_entry *se = list_entry (e, struct swap_entry, list_elem);
+    if (se->upage == upage) {
+      return se;
+    }
+  }
+  lock_release(&swap_lock);
 }

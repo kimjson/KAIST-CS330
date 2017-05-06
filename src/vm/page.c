@@ -27,7 +27,7 @@ sup_page_entry_create (void *upage, void *kpage) {
   sup_pte->upage = upage;
   sup_pte->kpage = kpage;
   sup_pte->is_valid = true; //???????
-  sup_pte->fault_case = 2;
+  sup_pte->fault_case = CASE_ZERO;
   sup_pte->swap_address = NULL;
   hash_insert(&thread_current()->sup_page_table, &sup_pte->hash_elem);
 }
