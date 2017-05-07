@@ -68,3 +68,20 @@ frame_entry_set_pte (void *upage, void *kpage, uint32_t *pte) {
   }
   sema_up(&frame_sema);
 }
+
+void
+free_frames(struct thread *exiting_thread) {
+  sema_down(&frame_sema);
+  struct list_elem *e;
+  for (e = list_begin (&frame_table); e != list_end (&frame_table);
+       e = list_next (e))
+  {
+    struct frame_entry *f = list_entry (e, struct frame_entry, list_elem);
+    if (f->using_thread == exiting_thread) {
+      list_remove(&f->list_elem);
+      palloc_free_multiple(f->kpage, 1);
+      free(f);
+    }
+  }
+  sema_up(&frame_sema);
+}

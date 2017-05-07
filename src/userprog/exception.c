@@ -181,7 +181,6 @@ page_fault (struct intr_frame *f)
   fault_addr = pg_round_down(fault_addr);
   if(is_stack_growth)
   {
-    printf("stack_growth\n");
     void *kpage = frame_table_allocator(PAL_USER);
     sup_page_entry_create(fault_addr,kpage);
     pagedir_set_page(thread_current()->pagedir, fault_addr, kpage, write);
@@ -190,11 +189,11 @@ page_fault (struct intr_frame *f)
   {
     if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
       printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
-      uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
-      printf("present bit: %d\n", paddr & PTE_P);
-      printf("mode bit: %d\n", paddr & PTE_W);
-      printf("owner bit: %d\n", paddr & PTE_U);
-      printf("write: %d\n", write);
+      // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
+      // printf("present bit: %d\n", paddr & PTE_P);
+      // printf("mode bit: %d\n", paddr & PTE_W);
+      // printf("owner bit: %d\n", paddr & PTE_U);
+      // printf("write: %d\n", write);
       thread_current()->info->is_killed = true;
       thread_current()->info->exit_status = -1;
       thread_exit();

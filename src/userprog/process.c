@@ -144,7 +144,6 @@ process_exit (void)
     pagedir_activate (NULL);
     pagedir_destroy (pd);
   }
-
 }
 
 /* Sets up the CPU for running user code in the current

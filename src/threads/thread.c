@@ -4,6 +4,8 @@
 #include "userprog/process.h"
 #endif
 
+#include "vm/frame.h"
+
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -363,7 +365,7 @@ thread_exit (void)
   file_close(thread_current()->self_file);
 
   // free its sup_page_table and frames related to it.
-
+  // free_frames(thread_current ());
 
 
   sema_up(&thread_current()->info->exec_sema);

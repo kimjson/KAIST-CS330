@@ -22,5 +22,6 @@ void frame_init (void);
 void *frame_table_allocator (enum palloc_flags flags);
 void frame_table_free (void *page);
 void frame_entry_set_pte (void *upage, void *kpage, uint32_t *pte);
+void free_frames(struct thread *exiting_thread);
 
 #endif
