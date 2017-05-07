@@ -164,7 +164,8 @@ page_fault (struct intr_frame *f)
   //printf("PHYS_BASE:0x%08x",PHYS_BASE-8388608);
   //printf("fault_addr:0x%08x",fault_addr);
   //printf("f->exp:0x%08x",f->esp);
-  if((fault_addr>=(f->esp)-32)&&(fault_addr >= PHYS_BASE - 8388608)&&(fault_addr < PHYS_BASE))
+  struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, pg_round_down (fault_addr));
+  if((fault_addr>=(f->esp)-32)&&(fault_addr >= PHYS_BASE - 8388608)&&(fault_addr < PHYS_BASE) && sup_pte == NULL)
   {
     is_stack_growth=true;
   }
@@ -175,21 +176,18 @@ page_fault (struct intr_frame *f)
 
 
 //  printf("is_stack_growth:%d\n",is_stack_growth);
+  // f->esp = pg_round_down (f->esp);
 
   fault_addr = pg_round_down(fault_addr);
-  // f->esp = pg_round_down (f->esp);
-  
   if(is_stack_growth)
   {
     //printf("stack_growth\n");
     void *kpage = frame_table_allocator(PAL_USER);
-    sup_page_entry_create(fault_addr,kpage);    
-    pagedir_set_page(thread_current()->pagedir, fault_addr, kpage, write); 
+    sup_page_entry_create(fault_addr,kpage);
+    pagedir_set_page(thread_current()->pagedir, fault_addr, kpage, write);
   }
-  else 
+  else
   {
-    struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
-    
     if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
       printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
       // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
@@ -208,7 +206,7 @@ page_fault (struct intr_frame *f)
     else {
       // swap in
       swap_in(sup_pte, not_present);
-      
+
     }
 
   }
