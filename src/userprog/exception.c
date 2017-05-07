@@ -8,6 +8,9 @@
 #include "threads/palloc.h"
 #include "vm/page.h"
 #include "vm/swap.h"
+#include "userprog/process.h"
+
+#define MAX_STACK_SIZE 8*1024*1024
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -158,10 +161,12 @@ page_fault (struct intr_frame *f)
   // printf("not present: %d\n", not_present);
   // printf("write1: %d\n", write);
 
-  if (is_kernel_vaddr(fault_addr) || !not_present) {
+  fault_addr = pg_round_down(fault_addr);
+  // f->esp = pg_round_down (f->esp);
+  struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
+  if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
     printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
-
-    uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
+    // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
     // printf("present bit: %d\n", paddr & PTE_P);
     // printf("mode bit: %d\n", paddr & PTE_W);
     // printf("owner bit: %d\n", paddr & PTE_U);
@@ -169,10 +174,14 @@ page_fault (struct intr_frame *f)
     thread_current()->info->is_killed = true;
     thread_current()->info->exit_status = -1;
     thread_exit();
-  } else {
-    struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, pg_round_down(fault_addr));
+  }
+  // else if () {
+  //   // stack growth
+  //   grow_stack (&f->esp);
+  // }
+  else {
+    // swap in
     swap_in(sup_pte, not_present);
-
   }
 
   /* To implement virtual memory, delete the rest of the function

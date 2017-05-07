@@ -514,9 +514,9 @@ bool grow_stack (void **esp)
   kpage = frame_table_allocator (PAL_USER | PAL_ZERO);
   if (kpage != NULL)
   {
-    success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+    success = install_page (((uint8_t *) *esp) - PGSIZE, kpage, true);
     if (success) {
-      sup_page_entry_create(((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
+      sup_page_entry_create(((uint8_t *) *esp) - PGSIZE, kpage);
     }
     else
       frame_table_free(kpage);
