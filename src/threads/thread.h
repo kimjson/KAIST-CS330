@@ -130,6 +130,7 @@ struct thread
 #endif
 
     struct hash sup_page_table;          /* supplemental page table */
+    struct semaphore sup_page_sema;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
