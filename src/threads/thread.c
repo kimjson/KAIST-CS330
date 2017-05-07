@@ -95,8 +95,12 @@ struct thread *find_child_by_tid(tid_t tid) {
   for (e = list_begin (&thread_current()->child_list); e != list_end (&thread_current()->child_list); e = list_next (e))
   {
     struct thread *thread = list_entry (e, struct thread, child_list_elem);
-
+    // if (thread->stack > PHYS_BASE) {
+    //   list_remove (&thread->child_list_elem);
+    //   continue;
+    // }
     if (thread->tid == tid) {
+    // if (thread->tid == tid && thread->stack < PHYS_BASE) {
       found_child = thread;
       break;
     }
@@ -114,7 +118,12 @@ struct thread_info *find_child_info_by_tid(tid_t tid) {
   for (e = list_begin (&thread_current()->child_info_list); e != list_end (&thread_current()->child_info_list); e = list_next (e))
   {
     struct thread_info *info = list_entry (e, struct thread_info, elem);
+    // if (info->elem.prev > PHYS_BASE || info->elem.next > PHYS_BASE) {
+    //   list_remove (&info->elem);
+    //   continue;
+    // }
     if (info->tid == tid) {
+    // if (info->tid == tid && info->elem.prev < PHYS_BASE && info->elem.next < PHYS_BASE) {
       found_info = info;
       break;
     }
@@ -354,6 +363,7 @@ thread_exit (void)
   file_close(thread_current()->self_file);
 
   // free its sup_page_table and frames related to it.
+
 
 
   sema_up(&thread_current()->info->exec_sema);

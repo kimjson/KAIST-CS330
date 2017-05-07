@@ -160,13 +160,6 @@ page_fault (struct intr_frame *f)
   fault_addr = pg_round_down(fault_addr);
   struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
   if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
-    debug_backtrace () ;
-    printf("sup page entry: 0x%08x\n", sup_pte);
-    printf("page fault handled wrong.\n");
-    printf("fault address: 0x%08x\n", fault_addr);
-    printf("not present: %d\n", not_present);
-    printf("write1: %d\n", write);
-    printf("user:%d\n",user);
     printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
     // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
     // printf("present bit: %d\n", paddr & PTE_P);

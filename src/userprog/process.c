@@ -101,23 +101,22 @@ int
 process_wait (tid_t child_tid)
 {
   struct thread_info *found_child_info = NULL;
-  struct thread *found_child = NULL;
+  // struct thread *found_child = NULL;
   found_child_info = find_child_info_by_tid(child_tid);
-  found_child = find_child_by_tid(child_tid);
-  if (found_child_info == NULL || found_child == NULL) {
+  // found_child = find_child_by_tid(child_tid);
+  if (found_child_info == NULL) {
     return -1;
   } else {
+    list_remove (&found_child_info->elem);
+    // list_remove (&found_child->child_list_elem);
     if (found_child_info->is_waited || found_child_info->is_killed) {
-      // list_remove (&found_child_info->elem);
-      // list_remove (&found_child->child_list_elem);
       return -1;
     }
     found_child_info->is_waited = true;
     sema_down(&found_child_info->wait_sema);
     // harvest
     int status = found_child_info->exit_status;
-    // list_remove (&found_child_info->elem);
-    // list_remove (&found_child->child_list_elem);
+    free(found_child_info);
     return status;
   }
 }

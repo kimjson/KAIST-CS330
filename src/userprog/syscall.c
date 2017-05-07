@@ -39,7 +39,7 @@ struct lock lock;
 //}
 
 void
-syscall_init (void) 
+syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 
@@ -264,10 +264,12 @@ static void handle_exec(struct intr_frame *f) {
     handle_invalid(f);
   }
   pid_t result = process_execute(cmd_line);
-  struct thread *child = find_child_by_tid((tid_t) result);
+  // struct thread *child = find_child_by_tid((tid_t) result);
+  // struct thread *child = list_entry(list_back(&thread_current()->child_list), struct thread, child_list_elem);
   struct thread_info *child_info = find_child_info_by_tid((tid_t) result);
-  if (child != NULL && child_info != NULL) {
-    sema_down(&child->info->exec_sema);
+  // struct thread_info *child_info = list_entry(list_back(&thread_current()->child_info_list), struct thread_info, elem);
+  if (child_info != NULL) {
+    sema_down(&child_info->exec_sema);
     if (!child_info->load_success) {
       result = -1;
     }
@@ -337,4 +339,3 @@ syscall_handler (struct intr_frame *f)// UNUSED)
     }
   }
 }
-

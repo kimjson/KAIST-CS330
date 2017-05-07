@@ -29,7 +29,6 @@ void swap_init (void) {
 void swap_out (struct frame_entry *f) {
 
   // sema_down(&swap_sema);
-  printf("swap_out intro\n");
   struct sup_page_entry *sup_pte = sup_page_table_lookup(&f->using_thread->sup_page_table, f->upage);
 
   struct disk *swap_disk = disk_get(1,1);
@@ -60,13 +59,11 @@ void swap_out (struct frame_entry *f) {
     palloc_free_page(f->kpage);
     free(f);
   }
-  printf("swap_out end\n");
 
 
 }
 
 void swap_in (struct sup_page_entry *sup_pte, bool writable) {
-  printf("swap_in intro\n");
 
   void *kpage = frame_table_allocator(PAL_USER);
 
@@ -84,6 +81,5 @@ void swap_in (struct sup_page_entry *sup_pte, bool writable) {
     sema_up(&swap_sema);
   }
   pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, writable);
-  printf("swap_in end\n");
 
 }
