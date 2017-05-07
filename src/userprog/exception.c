@@ -134,7 +134,7 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
-
+  bool is_stack_growth=false; //determine whether page fault caused by stack growth
 
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
@@ -161,27 +161,56 @@ page_fault (struct intr_frame *f)
   // printf("not present: %d\n", not_present);
   // printf("write1: %d\n", write);
 
+  //printf("PHYS_BASE:0x%08x",PHYS_BASE-8388608);
+  //printf("fault_addr:0x%08x",fault_addr);
+  //printf("f->exp:0x%08x",f->esp);
+  if((fault_addr>=(f->esp)-32)&&(fault_addr >= PHYS_BASE - 8388608)&&(fault_addr < PHYS_BASE))
+  {
+    is_stack_growth=true;
+  }
+  else
+  {
+    is_stack_growth=false;
+  }
+
+
+//  printf("is_stack_growth:%d\n",is_stack_growth);
+
   fault_addr = pg_round_down(fault_addr);
   // f->esp = pg_round_down (f->esp);
-  struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
-  if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
-    printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
-    // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
-    // printf("present bit: %d\n", paddr & PTE_P);
-    // printf("mode bit: %d\n", paddr & PTE_W);
-    // printf("owner bit: %d\n", paddr & PTE_U);
-    // printf("write: %d\n", write);
-    thread_current()->info->is_killed = true;
-    thread_current()->info->exit_status = -1;
-    thread_exit();
+  
+  if(is_stack_growth)
+  {
+    //printf("stack_growth\n");
+    void *kpage = frame_table_allocator(PAL_USER);
+    sup_page_entry_create(fault_addr,kpage);    
+    pagedir_set_page(thread_current()->pagedir, fault_addr, kpage, write); 
   }
-  // else if () {
-  //   // stack growth
-  //   grow_stack (&f->esp);
-  // }
-  else {
-    // swap in
-    swap_in(sup_pte, not_present);
+  else 
+  {
+    struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, fault_addr);
+    
+    if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
+      printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
+      // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
+      // printf("present bit: %d\n", paddr & PTE_P);
+      // printf("mode bit: %d\n", paddr & PTE_W);
+      // printf("owner bit: %d\n", paddr & PTE_U);
+      // printf("write: %d\n", write);
+      thread_current()->info->is_killed = true;
+      thread_current()->info->exit_status = -1;
+      thread_exit();
+    }
+    // else if () {
+    //   // stack growth
+    //   grow_stack (&f->esp);
+    // }
+    else {
+      // swap in
+      swap_in(sup_pte, not_present);
+      
+    }
+
   }
 
   /* To implement virtual memory, delete the rest of the function
