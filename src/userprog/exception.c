@@ -166,6 +166,7 @@ page_fault (struct intr_frame *f)
     // printf("mode bit: %d\n", paddr & PTE_W);
     // printf("owner bit: %d\n", paddr & PTE_U);
     // printf("write: %d\n", write);
+    // printf("sup_pte: %d\n", sup_pte);
     thread_current()->info->is_killed = true;
     thread_current()->info->exit_status = -1;
     thread_exit();
