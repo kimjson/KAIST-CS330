@@ -5,6 +5,7 @@
 #endif
 
 #include "vm/frame.h"
+#include "lib/user/syscall.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -345,8 +346,40 @@ thread_exit (void)
   // Close all its files
   struct list_elem *e;
   struct thread *curr = thread_current();
+  int i;
+
+  e = list_begin(&curr->mapping_list);
+
+  int mapping_list_length = list_size(&curr->mapping_list);
+  for (i = 0; i < mapping_list_length; i++) {
+    struct file *f = list_entry (e, struct file, mapping_elem);
+    e = list_next(e);
+    struct hash_iterator hash_iter;
+    hash_first (&hash_iter, &thread_current()->sup_page_table);
+    bool is_continue = true;
+    while (is_continue) {
+      struct sup_page_entry *sup_pte = hash_entry(hash_cur(&hash_iter), struct sup_page_entry, hash_elem);
+
+      if(hash_next (&hash_iter)){
+        is_continue=true;
+      }
+      else{
+        is_continue=false;
+      }
+
+      if(sup_pte->file_address==f){
+        frame_table_free(sup_pte->kpage);
+        sup_page_entry_delete(sup_pte);
+      }
+    }//while
+    list_remove(&f->mapping_elem);
+    if(i==mapping_list_length-1)
+      break;
+  }
+
+
+  // close files of current thread.
   int length = list_size(&curr->file_list);
-  int i=0;
   if(length>0) {
 
     e = list_begin(&curr->file_list);
@@ -529,6 +562,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->file_list);
   list_init(&t->child_list);
   list_init(&t->child_info_list);
+  list_init(&t->mapping_list);
 
 }
 

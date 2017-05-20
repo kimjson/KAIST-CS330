@@ -122,7 +122,7 @@ struct thread
     struct file *self_file;            /* executable file of thread itself */
 
     struct thread_info *info;
-
+    struct list mapping_list;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

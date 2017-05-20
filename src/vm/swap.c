@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 struct list swap_table;
-struct lock swap_sema;
+struct semaphore swap_sema;
 
 void swap_init (void) {
 
@@ -66,7 +66,6 @@ void swap_out (struct frame_entry *f) {
 void swap_in (struct sup_page_entry *sup_pte, bool writable) {
 
   void *kpage = frame_table_allocator(PAL_USER);
-
 
   struct disk *swap_disk = disk_get(1,1);
   if (swap_disk != NULL) {

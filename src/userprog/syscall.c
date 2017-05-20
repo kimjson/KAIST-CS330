@@ -30,6 +30,8 @@ static void handle_write(struct intr_frame *);
 static void handle_seek(struct intr_frame *);
 static void handle_tell(struct intr_frame *);
 static void handle_close(struct intr_frame *);
+static void handle_mmap(struct intr_frame *);
+static void handle_munmap(struct intr_frame *);
 
 static struct file *find_file_by_fd(int);
 struct lock lock;
@@ -195,8 +197,10 @@ static void handle_close(struct intr_frame *f) {
     struct file *f = list_entry (e2, struct file, elem_for_thread);
     if (f->fd == fd) {
       list_remove(&f->elem_for_thread);
+      // file_close (f);
       break;
     }
+
   }
   if (e2 == list_end(&thread_current()->file_list)) {
     thread_current()->info->exit_status = -1;
@@ -297,6 +301,87 @@ static void handle_tell(struct intr_frame *f) {
   result = (unsigned)file_tell(file);
   f->eax = result;
 }
+
+static void handle_mmap(struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  void *addr = *(void **)(f->esp + 8);
+  // if (is_invalid(addr)) {
+  //    handle_invalid(f);
+  //  }
+  // if fd is 0,1 or addr is 0 or addr is not page aligned, return -1
+
+  if (fd < 2 || addr == NULL || pg_round_down(addr) != addr) {
+    f->eax = -1;
+    return;
+  } else {
+    mapid_t new_mapping = 0;
+    struct file *target_file = file_reopen (find_file_by_fd(fd));
+    int filesize = file_length (target_file);
+    int page_num = filesize/PGSIZE;
+    int page_remainder = filesize - PGSIZE*page_num;
+    int i;
+    for(i=0;i<page_num;i++){
+      if (sup_page_table_lookup (&thread_current ()->sup_page_table, addr+PGSIZE*i) != NULL) {
+        f->eax = -1;
+        return;
+      }
+    }
+    if (page_remainder > 0) {
+      if (sup_page_table_lookup (&thread_current ()->sup_page_table, addr+PGSIZE*page_num) != NULL) {
+        f->eax = -1;
+        return;
+      }
+    }
+    for(i=0;i<page_num;i++){
+      sup_page_entry_create (addr+PGSIZE*i, NULL, target_file);
+    }
+    if (page_remainder > 0) {
+      sup_page_entry_create (addr+PGSIZE*page_num, NULL, target_file);
+    }
+    if (!list_empty (&thread_current()->mapping_list)) {
+      new_mapping = list_entry(list_back (&thread_current()->mapping_list), struct file, mapping_elem)->mapping + 1;
+    }
+    list_push_back (&thread_current()->mapping_list, &target_file->mapping_elem);
+    f->eax = new_mapping;
+  }
+}
+
+static void handle_munmap(struct intr_frame *f) {
+  mapid_t mapping = *(mapid_t *)(f->esp + 4);
+  struct list_elem *e;
+  for (e = list_begin (&thread_current()->mapping_list); e != list_end (&thread_current()->mapping_list);
+       e = list_next (e))
+    {
+      struct file *f = list_entry (e, struct file, mapping_elem);
+      if (f->mapping == mapping) {
+        struct hash_iterator i;
+        hash_first (&i, &thread_current()->sup_page_table);
+        bool is_continue = true;
+        while (is_continue) {
+
+          struct sup_page_entry *sup_pte = hash_entry(hash_cur(&i), struct sup_page_entry, hash_elem);
+
+          if(hash_next (&i)){
+            is_continue=true;
+          }
+          else{
+            is_continue=false;
+          }
+
+          if(sup_pte->file_address==f){
+            frame_table_free(sup_pte->kpage);
+            sup_page_entry_delete(sup_pte);
+          }
+
+        }//while
+
+
+        list_remove(&f->mapping_elem);
+        break;
+      }
+    }
+}
+
 static void
 syscall_handler (struct intr_frame *f)// UNUSED)
 {
@@ -336,6 +421,10 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       handle_seek(f);
     } else if (syscall_number == SYS_TELL) {
       handle_tell(f);
+    } else if (syscall_number == SYS_MMAP) {
+      handle_mmap(f);
+    } else if (syscall_number == SYS_MUNMAP) {
+      handle_munmap(f);
     }
   }
 }

@@ -182,7 +182,7 @@ page_fault (struct intr_frame *f)
   if(is_stack_growth)
   {
     void *kpage = frame_table_allocator(PAL_USER);
-    sup_page_entry_create(fault_addr,kpage);
+    sup_page_entry_create(fault_addr,kpage, NULL);
     pagedir_set_page(thread_current()->pagedir, fault_addr, kpage, write);
   }
   else
@@ -199,8 +199,18 @@ page_fault (struct intr_frame *f)
       thread_exit();
     }
     else {
-      // swap in
-      swap_in(sup_pte, not_present);
+      // if fault_case is swap, swap in
+      if (sup_pte->file_address == NULL) {
+        swap_in(sup_pte, not_present);
+      }
+      // if fault_case is filesys, read from file
+      else {
+        void *kpage = frame_table_allocator(PAL_USER | PAL_ZERO);
+        pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, write);
+        sup_pte->kpage = kpage;
+        sup_pte->file_pos = sup_pte->file_address->pos;
+        file_read (sup_pte->file_address, kpage, PGSIZE);
+      }
     }
 
   }

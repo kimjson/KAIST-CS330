@@ -476,7 +476,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     //printf("upage: %u\n", upage);
     //printf("kpage: %u\n", kpage);
 
-    sup_page_entry_create(upage, kpage);
+    sup_page_entry_create(upage, kpage, NULL);
 
     /* Advance. */
     read_bytes -= page_read_bytes;
@@ -499,7 +499,7 @@ setup_stack_arg (char *file_name, void **esp)
   {
     success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
     if (success) {
-      sup_page_entry_create(((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
+      sup_page_entry_create(((uint8_t *) PHYS_BASE) - PGSIZE, kpage, NULL);
       *esp = PHYS_BASE;
       // Push arguments
       push_argument(file_name, esp);
@@ -520,7 +520,7 @@ bool grow_stack (void **esp)
   {
     success = install_page (((uint8_t *) *esp) - PGSIZE, kpage, true);
     if (success) {
-      sup_page_entry_create(((uint8_t *) *esp) - PGSIZE, kpage);
+      sup_page_entry_create(((uint8_t *) *esp) - PGSIZE, kpage, NULL);
     }
     else
       frame_table_free(kpage);
