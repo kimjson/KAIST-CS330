@@ -20,7 +20,7 @@ bool page_less (const struct hash_elem *a_, const struct hash_elem *b_, void *au
   return a->upage < b->upage;
 }
 
-void
+struct sup_page_entry *
 sup_page_entry_create (void *upage, void *kpage, struct file *file) {
   // store va to pa mapping in sup page table.
   struct sup_page_entry *sup_pte = (struct sup_page_entry *)malloc(sizeof(struct sup_page_entry));
@@ -30,6 +30,7 @@ sup_page_entry_create (void *upage, void *kpage, struct file *file) {
   sup_pte->file_address = file;
   sup_pte->swap_address = NULL;
   hash_insert(&thread_current()->sup_page_table, &sup_pte->hash_elem);
+  return sup_pte;
 }
 
 struct sup_page_entry *

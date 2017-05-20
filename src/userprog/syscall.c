@@ -197,7 +197,7 @@ static void handle_close(struct intr_frame *f) {
     struct file *f = list_entry (e2, struct file, elem_for_thread);
     if (f->fd == fd) {
       list_remove(&f->elem_for_thread);
-      // file_close (f);
+      file_close (f);
       break;
     }
 
@@ -315,7 +315,12 @@ static void handle_mmap(struct intr_frame *f) {
     return;
   } else {
     mapid_t new_mapping = 0;
-    struct file *target_file = file_reopen (find_file_by_fd(fd));
+    struct file *old_file = find_file_by_fd(fd);
+    // if (list_entry(&old_file->mapping_elem, struct file, mapping_elem) != NULL) {
+    //   f->eax = -1;
+    //   return;
+    // }
+    struct file *target_file = file_reopen (old_file);
     int filesize = file_length (target_file);
     int page_num = filesize/PGSIZE;
     int page_remainder = filesize - PGSIZE*page_num;
@@ -333,10 +338,12 @@ static void handle_mmap(struct intr_frame *f) {
       }
     }
     for(i=0;i<page_num;i++){
-      sup_page_entry_create (addr+PGSIZE*i, NULL, target_file);
+      struct sup_page_entry *sup_pte = sup_page_entry_create (addr+PGSIZE*i, NULL, target_file);
+      sup_pte->file_pos = PGSIZE*i;
     }
     if (page_remainder > 0) {
-      sup_page_entry_create (addr+PGSIZE*page_num, NULL, target_file);
+      struct sup_page_entry *sup_pte = sup_page_entry_create (addr+PGSIZE*page_num, NULL, target_file);
+      sup_pte->file_pos = PGSIZE*page_num;
     }
     if (!list_empty (&thread_current()->mapping_list)) {
       new_mapping = list_entry(list_back (&thread_current()->mapping_list), struct file, mapping_elem)->mapping + 1;

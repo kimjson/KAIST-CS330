@@ -208,8 +208,8 @@ page_fault (struct intr_frame *f)
         void *kpage = frame_table_allocator(PAL_USER | PAL_ZERO);
         pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, write);
         sup_pte->kpage = kpage;
-        sup_pte->file_pos = sup_pte->file_address->pos;
-        file_read (sup_pte->file_address, kpage, PGSIZE);
+        // sup_pte->file_pos = sup_pte->file_address->pos;
+        file_read_at (sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
       }
     }
 
