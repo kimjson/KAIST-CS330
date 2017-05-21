@@ -29,6 +29,7 @@ sup_page_entry_create (void *upage, void *kpage, struct file *file) {
   sup_pte->is_valid = true; //???????
   sup_pte->file_address = file;
   sup_pte->swap_address = NULL;
+  sup_pte->lazy_type = 0;//partial page
   hash_insert(&thread_current()->sup_page_table, &sup_pte->hash_elem);
   return sup_pte;
 }

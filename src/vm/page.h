@@ -23,6 +23,8 @@ struct sup_page_entry {
   struct swap_entry *swap_address;
   struct file *file_address;
   off_t file_pos;
+  int lazy_type; //0: partial page, 1: all zerod page 2: all non-zerod page
+  bool writable;
 };
 
 void page_init (void);

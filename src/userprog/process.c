@@ -532,6 +532,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (ofs % PGSIZE == 0);
 
   file_seek (file, ofs);
+
+  int pos_index = 0;
   while (read_bytes > 0 || zero_bytes > 0)
   {
     /* Do calculate how to fill this page.
@@ -541,41 +543,49 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* Get a page of memory. */
-    // if (page_read_bytes == PGSIZE) {
-    //
-    // } else if (page_zero_bytes == PGSIZE) {
-    //
-    // } else {
-    //
-    // }
-    uint8_t *kpage =  frame_table_allocator (PAL_USER);
-    if (kpage == NULL)
-      return false;
+    struct sup_page_entry *sup_pte;
+    if (page_read_bytes == PGSIZE) { // all non-zeroed page
+      sup_pte = sup_page_entry_create(upage,NULL,file);
+      sup_pte->lazy_type=2;
+      sup_pte->file_pos = ofs + PGSIZE*pos_index;
+      sup_pte->writable = writable;
+    } else if (page_zero_bytes == PGSIZE) { // all zeroed-page
+      sup_pte = sup_page_entry_create(upage,NULL,file);
+      sup_pte->lazy_type=1;
+      sup_pte->writable = writable;
+    } else { // partial page, not needs to be paged
+      uint8_t *kpage =  frame_table_allocator (PAL_USER);
+      if (kpage == NULL)
+        return false;
 
-    /* Load this page. */
-    if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
-    {
-      frame_table_free(kpage);
-      return false;
+      /* Load this page. */
+      if (file_read_at (file, kpage, page_read_bytes, ofs + PGSIZE*pos_index) != (int) page_read_bytes)
+      {
+        frame_table_free(kpage);
+        return false;
+      }
+      memset (kpage + page_read_bytes, 0, page_zero_bytes);
+
+      /* Add the page to the process's address space. */
+      if (!install_page (upage, kpage, writable))
+      {
+        frame_table_free(kpage);
+        return false;
+      }
+
+      //printf("upage: %u\n", upage);
+      //printf("kpage: %u\n", kpage);
+
+      sup_pte = sup_page_entry_create(upage, kpage, NULL);
+      sup_pte->lazy_type=0;
+      sup_pte->file_pos = PGSIZE*pos_index;
     }
-    memset (kpage + page_read_bytes, 0, page_zero_bytes);
-
-    /* Add the page to the process's address space. */
-    if (!install_page (upage, kpage, writable))
-    {
-      frame_table_free(kpage);
-      return false;
-    }
-
-    //printf("upage: %u\n", upage);
-    //printf("kpage: %u\n", kpage);
-
-    sup_page_entry_create(upage, kpage, NULL);
 
     /* Advance. */
     read_bytes -= page_read_bytes;
     zero_bytes -= page_zero_bytes;
     upage += PGSIZE;
+    pos_index++;
   }
   return true;
 }

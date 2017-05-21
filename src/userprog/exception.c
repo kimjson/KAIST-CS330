@@ -164,6 +164,7 @@ page_fault (struct intr_frame *f)
   //printf("PHYS_BASE:0x%08x",PHYS_BASE-8388608);
   //printf("fault_addr:0x%08x",fault_addr);
   //printf("f->exp:0x%08x",f->esp);
+
   struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, pg_round_down (fault_addr));
   if((fault_addr>=(f->esp)-32)&&(fault_addr >= PHYS_BASE - 8388608)&&(fault_addr < PHYS_BASE) && sup_pte == NULL)
   {
@@ -188,8 +189,8 @@ page_fault (struct intr_frame *f)
   else
   {
     if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
-      // printf("fault addr: 0x%08x\n", fault_addr);
-      // printf("not present: %d\n", not_present);
+      //printf("fault addr: 0x%08x\n", fault_addr);
+      //printf("not present: %d\n", not_present);
       printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
       // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
       // printf("present bit: %d\n", paddr & PTE_P);
@@ -207,16 +208,33 @@ page_fault (struct intr_frame *f)
       }
       // if fault_case is filesys, read from file
       else {
+
         // printf("read from file start\n");
-        void *kpage = frame_table_allocator(PAL_USER | PAL_ZERO);
-        pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, not_present);
-        sup_pte->kpage = kpage;
-        // sup_pte->file_pos = sup_pte->file_address->pos;
-        file_read_at (sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
-        // printf("read from file end\n");
+        void *kpage;
+        if (sup_pte->lazy_type == 1)//all zerod page
+        {
+          kpage = frame_table_allocator(PAL_USER | PAL_ZERO);
+          pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, sup_pte->writable);
+          sup_pte->kpage = kpage;
+        }
+        else if (sup_pte->lazy_type == 2)//all non-zerod page
+        {
+          kpage = frame_table_allocator(PAL_USER);
+          sup_pte->kpage = kpage;
+          file_read_at(sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
+          pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, sup_pte->writable);
+        }
+        else // loading mmaped file
+        {
+          kpage = frame_table_allocator(PAL_USER | PAL_ZERO);
+          pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, not_present);
+          sup_pte->kpage = kpage;
+          // sup_pte->file_pos = sup_pte->file_address->pos;
+          file_read_at (sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
+          // printf("read from file end\n");
+        }
       }
     }
-
   }
 
   /* To implement virtual memory, delete the rest of the function
