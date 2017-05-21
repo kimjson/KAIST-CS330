@@ -364,7 +364,7 @@ static void handle_munmap(struct intr_frame *f) {
         struct hash_iterator i;
         hash_first (&i, &thread_current()->sup_page_table);
         bool is_continue = true;
-        while (is_continue) {
+        while (is_continue) { 
 
           struct sup_page_entry *sup_pte = hash_entry(hash_cur(&i), struct sup_page_entry, hash_elem);
 
@@ -376,9 +376,14 @@ static void handle_munmap(struct intr_frame *f) {
           }
 
           if(sup_pte->file_address==f){
+            if(pagedir_is_dirty(thread_current()->pagedir, sup_pte->upage)){
+              int result = file_write(f+sup_pte->file_pos,sup_pte->kpage,4096);
+            }
+            
             frame_table_free(sup_pte->kpage);
             sup_page_entry_delete(sup_pte);
           }
+
 
         }//while
 
