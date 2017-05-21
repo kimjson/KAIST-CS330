@@ -139,7 +139,101 @@ process_exit (void)
        process page directory.  We must activate the base page
        directory before destroying the process's page
        directory, or our active page directory will be one
-       that's been freed (and cleared). */
+       that's been freed (and cleared).
+    */
+
+    // close files, free sup page entries, frames , etc.
+
+    // Close all its files
+    struct list_elem *e;
+    int i;
+
+    e = list_begin(&curr->mapping_list);
+
+
+    int mapping_list_length = list_size(&curr->mapping_list);
+    for (i = 0; i < mapping_list_length; i++) {
+      struct file *f = list_entry (e, struct file, mapping_elem);
+      e = list_next(e);
+      struct hash_iterator hash_iter;
+      hash_first (&hash_iter, &thread_current()->sup_page_table);
+      bool is_continue = true;
+      // int itr;
+      // int sup_size = hash_size(&thread_current()->sup_page_table);
+      // for( itr=0;itr<sup_size;itr++ ){
+      //   struct sup_page_entry *sup_pte = hash_entry(hash_cur(&hash_iter), struct sup_page_entry, hash_elem);
+      //   hash_next (&hash_iter);
+      //   if(sup_pte->file_address==f){
+      //    //  printf("file_addr:0x%8x",sup_pte->file_address);
+      //     if(pagedir_is_dirty(pd, sup_pte->upage)){
+      //        int result = file_write_at(f, sup_pte->kpage, 4096, sup_pte->file_pos);
+      //     }
+      //     frame_table_free(sup_pte->kpage);
+      //     sup_page_entry_delete(sup_pte);
+      //   }
+      //
+      // }
+
+      struct list hash_delete_list;
+      list_init (&hash_delete_list);
+      while (is_continue) {
+         struct sup_page_entry *sup_pte = hash_entry(hash_cur(&hash_iter), struct sup_page_entry, hash_elem);
+        //  if(hash_iter.elem->list_elem.next != NULL)
+         if(hash_next(&hash_iter))
+         {
+           is_continue=true;
+         }
+         else{
+           is_continue=false;
+         }
+
+         if(sup_pte->file_address==f){
+          //  printf("file_addr:0x%8x",sup_pte->file_address);
+           if(pagedir_is_dirty(pd, sup_pte->upage)){
+              int result = file_write_at(f, sup_pte->kpage, 4096, sup_pte->file_pos);
+           }
+           list_push_back (&hash_delete_list, &sup_pte->delete_elem);
+         }
+
+      }
+
+      struct list_elem *d_elem;
+
+      d_elem = list_begin (&hash_delete_list);
+      while (1)
+        {
+          if (d_elem == list_end (&hash_delete_list)) {
+            break;
+          }
+          struct sup_page_entry *spte = list_entry (d_elem, struct sup_page_entry, delete_elem);
+          d_elem = list_next (d_elem);
+          list_remove(&spte->delete_elem);
+          frame_table_free(spte->kpage);
+          sup_page_entry_delete(spte);
+        }
+
+      list_remove(&f->mapping_elem);
+      if(i==mapping_list_length-1)
+        break;
+    }
+
+
+    // close files of current thread.
+    int length = list_size(&curr->file_list);
+    if(length>0) {
+
+      e = list_begin(&curr->file_list);
+
+      for (i = 0; i < length; i++) {
+        struct file *f = list_entry (e, struct file, elem_for_thread);
+        list_remove(&f->elem_for_thread);
+        e = list_next(e);
+        file_close(f);
+        if(i==length-1)
+          break;
+      }
+    }
+
     curr->pagedir = NULL;
     pagedir_activate (NULL);
     pagedir_destroy (pd);

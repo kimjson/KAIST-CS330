@@ -15,6 +15,7 @@ enum fault_case
 
 struct sup_page_entry {
   struct hash_elem hash_elem;
+  struct list_elem delete_elem;
   void *upage;                // user virtual address
   void *kpage;                // kernel virtual address. physical frame is identified by this.
   bool is_valid;

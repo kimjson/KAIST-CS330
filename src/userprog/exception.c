@@ -188,6 +188,8 @@ page_fault (struct intr_frame *f)
   else
   {
     if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
+      // printf("fault addr: 0x%08x\n", fault_addr);
+      // printf("not present: %d\n", not_present);
       printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
       // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
       // printf("present bit: %d\n", paddr & PTE_P);
@@ -205,11 +207,13 @@ page_fault (struct intr_frame *f)
       }
       // if fault_case is filesys, read from file
       else {
+        // printf("read from file start\n");
         void *kpage = frame_table_allocator(PAL_USER | PAL_ZERO);
-        pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, write);
+        pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, not_present);
         sup_pte->kpage = kpage;
         // sup_pte->file_pos = sup_pte->file_address->pos;
         file_read_at (sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
+        // printf("read from file end\n");
       }
     }
 

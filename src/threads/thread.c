@@ -343,62 +343,6 @@ thread_exit (void)
   /* Just set our status to dying and schedule another process.
      We will be destroyed during the call to schedule_tail(). */
   intr_disable ();
-  // Close all its files
-  struct list_elem *e;
-  struct thread *curr = thread_current();
-  int i;
-
-  e = list_begin(&curr->mapping_list);
-
-  int mapping_list_length = list_size(&curr->mapping_list);
-  for (i = 0; i < mapping_list_length; i++) {
-    struct file *f = list_entry (e, struct file, mapping_elem);
-    e = list_next(e);
-    struct hash_iterator hash_iter;
-    hash_first (&hash_iter, &thread_current()->sup_page_table);
-    bool is_continue = true;
-    while (is_continue) {
-       struct sup_page_entry *sup_pte = hash_entry(hash_cur(&hash_iter), struct sup_page_entry, hash_elem);
-    
-       if(hash_next (&hash_iter)){
-         is_continue=true;
-       }
-       else{
-         is_continue=false;
-       }
-    
-       if(sup_pte->file_address==f){
-        printf("file_addr:0x%8x",sup_pte->file_address);
-        if(pagedir_is_dirty(thread_current()->pagedir, sup_pte->upage)){
-              int result = file_write(f+sup_pte->file_pos,sup_pte->kpage,4096);
-          }
-          frame_table_free(sup_pte->kpage);
-          sup_page_entry_delete(sup_pte);
-       }
-     }
-    
-    list_remove(&f->mapping_elem);
-    if(i==mapping_list_length-1)
-      break;
-  }
-
-
-  // close files of current thread.
-  int length = list_size(&curr->file_list);
-  if(length>0) {
-
-    e = list_begin(&curr->file_list);
-
-    for (i = 0; i < length; i++) {
-      struct file *f = list_entry (e, struct file, elem_for_thread);
-      list_remove(&f->elem_for_thread);
-      e = list_next(e);
-      file_close(f);
-      if(i==length-1)
-        break;
-    }
-  }
-
 
   file_close(thread_current()->self_file);
 

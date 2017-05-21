@@ -98,6 +98,8 @@ static void handle_exit(struct intr_frame *f) {
     thread_current()->info->exit_status = status;
     printf("%s: exit(%d)\n", thread_current()->exec_name, status);
 
+    //
+
     thread_exit();
   }
 }
@@ -364,7 +366,10 @@ static void handle_munmap(struct intr_frame *f) {
         struct hash_iterator i;
         hash_first (&i, &thread_current()->sup_page_table);
         bool is_continue = true;
-        while (is_continue) { 
+
+        struct list hash_delete_list;
+        list_init (&hash_delete_list);
+        while (is_continue) {
 
           struct sup_page_entry *sup_pte = hash_entry(hash_cur(&i), struct sup_page_entry, hash_elem);
 
@@ -377,15 +382,26 @@ static void handle_munmap(struct intr_frame *f) {
 
           if(sup_pte->file_address==f){
             if(pagedir_is_dirty(thread_current()->pagedir, sup_pte->upage)){
-              int result = file_write(f+sup_pte->file_pos,sup_pte->kpage,4096);
+              int result = file_write_at(f, sup_pte->kpage, PGSIZE, sup_pte->file_pos);
             }
-            
-            frame_table_free(sup_pte->kpage);
-            sup_page_entry_delete(sup_pte);
+            list_push_back (&hash_delete_list, &sup_pte->delete_elem);
           }
-
-
         }//while
+
+        struct list_elem *d_elem;
+
+        d_elem = list_begin (&hash_delete_list);
+        while (1)
+          {
+            if (d_elem == list_end (&hash_delete_list)) {
+              break;
+            }
+            struct sup_page_entry *spte = list_entry (d_elem, struct sup_page_entry, delete_elem);
+            d_elem = list_next (d_elem);
+            list_remove(&spte->delete_elem);
+            frame_table_free(spte->kpage);
+            sup_page_entry_delete(spte);
+          }
 
 
         list_remove(&f->mapping_elem);
