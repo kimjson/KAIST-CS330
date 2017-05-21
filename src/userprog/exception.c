@@ -189,8 +189,9 @@ page_fault (struct intr_frame *f)
   else
   {
     if (is_kernel_vaddr(fault_addr) || !not_present || sup_pte == NULL) {
-      //printf("fault addr: 0x%08x\n", fault_addr);
-      //printf("not present: %d\n", not_present);
+      // printf("fault addr: 0x%08x\n", fault_addr);
+      // printf("not present: %d\n", not_present);
+      // printf("sup_pte: 0x%08x\n", sup_pte);
       printf("%s: exit(%d)\n", thread_current()->exec_name, -1);
       // uint32_t paddr = (uint32_t)pagedir_get_page(thread_current()->pagedir, fault_addr);
       // printf("present bit: %d\n", paddr & PTE_P);
@@ -208,8 +209,6 @@ page_fault (struct intr_frame *f)
       }
       // if fault_case is filesys, read from file
       else {
-
-        // printf("read from file start\n");
         void *kpage;
         if (sup_pte->lazy_type == 1)//all zerod page
         {
@@ -221,8 +220,8 @@ page_fault (struct intr_frame *f)
         {
           kpage = frame_table_allocator(PAL_USER);
           sup_pte->kpage = kpage;
-          file_read_at(sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
           pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, sup_pte->writable);
+          file_read_at(sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
         }
         else // loading mmaped file
         {

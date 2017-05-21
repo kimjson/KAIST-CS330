@@ -531,6 +531,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
+  file = file_reopen (file);
+
   file_seek (file, ofs);
 
   int pos_index = 0;
@@ -552,6 +554,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     } else if (page_zero_bytes == PGSIZE) { // all zeroed-page
       sup_pte = sup_page_entry_create(upage,NULL,file);
       sup_pte->lazy_type=1;
+      sup_pte->file_pos = ofs + PGSIZE*pos_index;
       sup_pte->writable = writable;
     } else { // partial page, not needs to be paged
       uint8_t *kpage =  frame_table_allocator (PAL_USER);
@@ -576,9 +579,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       //printf("upage: %u\n", upage);
       //printf("kpage: %u\n", kpage);
 
-      sup_pte = sup_page_entry_create(upage, kpage, NULL);
+      sup_pte = sup_page_entry_create(upage, kpage, file);
       sup_pte->lazy_type=0;
-      sup_pte->file_pos = PGSIZE*pos_index;
+      sup_pte->file_pos = ofs + PGSIZE*pos_index;
     }
 
     /* Advance. */

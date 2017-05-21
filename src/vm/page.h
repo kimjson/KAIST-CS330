@@ -10,7 +10,8 @@ enum fault_case
 {
  CASE_SWAP,
  CASE_FILESYS,
- CASE_ZERO
+ CASE_ZERO,
+ CASE_EXEC
 };
 
 struct sup_page_entry {

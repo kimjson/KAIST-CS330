@@ -31,8 +31,8 @@ void swap_out (struct frame_entry *f) {
   // sema_down(&swap_sema);
   struct sup_page_entry *sup_pte = sup_page_table_lookup(&f->using_thread->sup_page_table, f->upage);
 
-  struct disk *swap_disk = disk_get(1,1);
-  if (swap_disk != NULL) {
+  if (pagedir_is_dirty (thread_current()->pagedir, sup_pte->upage)) {
+    struct disk *swap_disk = disk_get(1,1);
     // list iterate and find empty swap slot.
     struct list_elem *e;
     sema_down(&swap_sema);
@@ -54,13 +54,11 @@ void swap_out (struct frame_entry *f) {
       }
     }
     sema_up(&swap_sema);
-    // update supplementary page table using pte.h static inline void *pte_get_page (uint32_t pte)
-    pagedir_clear_page(f->using_thread->pagedir, f->upage);
-    palloc_free_page(f->kpage);
-    free(f);
   }
-
-
+  // update supplementary page table using pte.h static inline void *pte_get_page (uint32_t pte)
+  pagedir_clear_page(f->using_thread->pagedir, f->upage);
+  palloc_free_page(f->kpage);
+  free(f);
 }
 
 void swap_in (struct sup_page_entry *sup_pte, bool writable) {
@@ -80,5 +78,5 @@ void swap_in (struct sup_page_entry *sup_pte, bool writable) {
     sema_up(&swap_sema);
   }
   pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, writable);
-
+  pagedir_set_dirty (thread_current()->pagedir, sup_pte->upage, true);
 }
