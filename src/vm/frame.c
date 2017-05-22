@@ -25,7 +25,7 @@ frame_table_allocator (enum palloc_flags flags)
     if (sup_pte->file_address == NULL) {
       swap_out(victim_f);
     } else {
-      if (pagedir_is_dirty (victim_f->using_thread->pagedir, victim_f->upage)) {
+      if (pagedir_is_dirty (victim_f->using_thread->pagedir, victim_f->upage) && sup_pte->writable) {
         file_write_at(sup_pte->file_address, victim_f->kpage, PGSIZE, sup_pte->file_pos);
       }
       pagedir_clear_page(victim_f->using_thread->pagedir, victim_f->upage);

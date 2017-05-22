@@ -206,17 +206,18 @@ page_fault (struct intr_frame *f)
       // if fault_case is swap, swap in
       if (sup_pte->file_address == NULL) {
         swap_in(sup_pte, not_present);
+        pagedir_set_dirty (thread_current()->pagedir, sup_pte->upage, true);
       }
       // if fault_case is filesys, read from file
       else {
         void *kpage;
-        if (sup_pte->lazy_type == 1)//all zerod page
+        if (sup_pte->lazy_type == 1)//all zeroed page
         {
           kpage = frame_table_allocator(PAL_USER | PAL_ZERO);
           pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, sup_pte->writable);
           sup_pte->kpage = kpage;
         }
-        else if (sup_pte->lazy_type == 2)//all non-zerod page
+        else if (sup_pte->lazy_type == 2)//all non-zeroed page
         {
           kpage = frame_table_allocator(PAL_USER);
           sup_pte->kpage = kpage;
@@ -232,6 +233,7 @@ page_fault (struct intr_frame *f)
           file_read_at (sup_pte->file_address, kpage, PGSIZE, sup_pte->file_pos);
           // printf("read from file end\n");
         }
+        pagedir_set_dirty (thread_current()->pagedir, sup_pte->upage, true);
       }
     }
   }

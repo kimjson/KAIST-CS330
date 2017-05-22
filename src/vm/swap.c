@@ -78,5 +78,4 @@ void swap_in (struct sup_page_entry *sup_pte, bool writable) {
     sema_up(&swap_sema);
   }
   pagedir_set_page(thread_current()->pagedir, sup_pte->upage, kpage, writable);
-  pagedir_set_dirty (thread_current()->pagedir, sup_pte->upage, true);
 }
