@@ -122,7 +122,6 @@ struct thread
     struct file *self_file;            /* executable file of thread itself */
 
     struct thread_info *info;
-    struct list mapping_list;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -131,6 +130,7 @@ struct thread
 
     struct hash sup_page_table;          /* supplemental page table */
     struct semaphore sup_page_sema;
+    struct list mapping_list;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
