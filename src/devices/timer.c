@@ -29,6 +29,13 @@ static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 
+struct list sleep_list;
+
+/* thread alarm_time less function */
+bool alarm_less_func (const struct list_elem *a, const struct list_elem *b, void *aux) {
+  return list_entry(a,struct thread,sleep_list_elem)->alarm_time < list_entry(b,struct thread,sleep_list_elem)->alarm_time;
+}
+
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
    corresponding interrupt. */
@@ -44,6 +51,7 @@ timer_init (void)
   outb (0x40, count >> 8);
 
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -99,8 +107,18 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  
+  void *aux;
+  struct thread *current_thread = thread_current();
+  current_thread->alarm_time = start + ticks;
+  enum intr_level old_level = intr_diable();
+  list_insert_ordered(&sleep_list, &(current_thread->sleep_list_elem), &alarm_less_func, aux);
+  thread_block();
+  intr_set_level(old_level);
+
+  //while (timer_elapsed (start) < ticks) 
+   // thread_yield ();
+
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -137,6 +155,19 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  struct list_elem *e;
+  if (!list_empty(&sleep_list)) {
+    
+    for (e = list_begin (&sleep_list); e != list_end (&sleep_list); e = list_next (e)) {
+      struct thread *thread = list_entry (e, struct thread, sleep_list_elem);
+      if (thread->alarm_time <= ticks) {
+        thread_unblock(thread);
+        list_remove(&(thread->sleep_list_elem));
+      } else {
+        break;
+      }
+    }
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

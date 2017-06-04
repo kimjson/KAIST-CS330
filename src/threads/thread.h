@@ -108,6 +108,11 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
 
+    /*thread sleep start time*/
+    int64_t alarm_time;
+    struct list_elem sleep_list_elem;
+
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 

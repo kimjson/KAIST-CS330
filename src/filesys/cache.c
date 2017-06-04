@@ -46,13 +46,13 @@ cache_out(struct cache_entry *c, struct inode *inode){
 }
 
 struct cache_entry*
-cache_lookup(struct cache_entry *target_entry){
+cache_lookup(disk_sector_t sec_no){
 	struct cache_entry *return_cache;
 	sema_down(&cache_sema);
 	struct list_elem *e;
 	for(e = list_begin(&cache); e != list_end(&frame_table); e= list_next(e)){
 		struct cache_entry *c = list_entry(e, struct cache_entry, list_elem);
-		if(c->first_sec_no == target_entry->first_sec_no){
+		if(sec_no == target_entry->first_sec_no){
 			return_cache = cache_entry;
 			break;
 		}

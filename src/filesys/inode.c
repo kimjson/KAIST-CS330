@@ -6,6 +6,7 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#include "filesys/cache.h"
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -37,7 +38,7 @@ struct inode
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;             /* Inode content. */
-    cache_entry *cache;                 /* cache entry pointer */
+    //cache_entry *cache;                 /* cache entry pointer */
   };
 
 /* Returns the disk sector that contains byte offset POS within
@@ -90,14 +91,41 @@ inode_create (disk_sector_t sector, off_t length)
       disk_inode->magic = INODE_MAGIC;
       if (free_map_allocate (sectors, &disk_inode->start))
         {
-          disk_write (filesys_disk, sector, disk_inode);
+
+          //disk_write (filesys_disk, sector, disk_inode);
+          
+          struct cache_entry* target_ce = cache_lookup(sector);
+          if(target_ce!=NULL){
+            //cache hit
+            memcpy(target_ce->block,disk_inode,DISK_SECTOR_SIZE);
+            target_ce->is_dirty =true;
+          }else{
+            target_ce = cache_in(sector);
+            cache_in(sector+1);
+            memcpy(target_ce->block,disk_inode,DISK_SECTOR_SIZE);
+            target_ce->is_dirty =true;
+          }
+
           if (sectors > 0)
             {
               static char zeros[DISK_SECTOR_SIZE];
               size_t i;
 
               for (i = 0; i < sectors; i++)
-                disk_write (filesys_disk, disk_inode->start + i, zeros);
+                {
+                //disk_write (filesys_disk, disk_inode->start + i, zeros);
+                struct cache_entry* target_ce2 = cache_lookup(disk_inode->start+i);
+                if(target_ce2!=NULL){
+                //cache hit
+                  memcpy(target_ce2->block,zeros,DISK_SECTOR_SIZE);
+                  target_ce2->is_dirty =true;
+                }else{
+                  target_ce2 = cache_in(disk_inode->start+i);
+                  cache_in(disk_inode->start+i);
+                  memcpy(target_ce2->block,zeros,DISK_SECTOR_SIZE);
+                  target_ce2->is_dirty =true;
+                }
+              }
             }
           success = true;
         }
@@ -140,7 +168,19 @@ inode_open (disk_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-  disk_read (filesys_disk, inode->sector, &inode->data);
+  
+  struct cache_entry* target_ce = cache_lookup(inode->sector);
+  if(target_ce != NULL){
+      memcpy(&inode->data,target_ce->block,DISK_SECTOR_SIZE);
+
+  }else{
+      target_ce = cache_in(inode->sector);
+      cache_in(inode->sector+1);
+      memcpy(&inode->data,target_ce->block,DISK_SECTOR_SIZE);  
+  }
+  //disk_read (filesys_disk, inode->sector, &inode->data);
+  
+
   return inode;
 }
 
@@ -223,31 +263,50 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       if (chunk_size <= 0)
         break;
 
+
+
       if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE)
         {
           // if cache hit, bring it.
-          if (inode->cache != NULL) {
+          struct cache_entry *target_ce = cache_lookup(sector_idx);
+          if (target_ce != NULL) {
             // cache hit.
-            memcpy (buffer + bytes_read, inode->cache->block, DISK_SECTOR_SIZE);
+            memcpy (buffer + bytes_read, target_ce->block, DISK_SECTOR_SIZE);
           } else {
             /* Read full sector directly into caller's buffer. */
-            struct cache_entry *ce = cache_in(sector_idx);
-            memcpy (buffer + bytes_read, ce->block, DISK_SECTOR_SIZE);
-            inode->cache = ce;
+            
+            target_ce = cache_in(sector_idx);
+            cache_in(sector_idx+1);
+            memcpy (buffer + bytes_read, target_ce->block, DISK_SECTOR_SIZE);
           }
         }
       else
         {
           /* Read sector into bounce buffer, then partially copy
              into caller's buffer. */
-          if (bounce == NULL)
-            {
-              bounce = malloc (DISK_SECTOR_SIZE);
-              if (bounce == NULL)
-                break;
-            }
-          disk_read (filesys_disk, sector_idx, bounce);
-          memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
+          // if (bounce == NULL)
+          //   {
+          //     bounce = malloc (DISK_SECTOR_SIZE);
+          //     if (bounce == NULL)
+          //       break;
+          //   }
+
+          struct cache_entry *target_ce = cache_lookup(sector_idx);
+          if (target_ce != NULL) {
+            // cache hit.
+            memcpy (buffer + bytes_read, target_ce->block+sector_ofs, chunk_size);
+          } else {
+            /* Read full sector directly into caller's buffer. */
+            
+            target_ce = cache_in(sector_idx);
+            cache_in(sector_idx+1);
+            memcpy (buffer + bytes_read, target_ce->block+sector_ofs, chunk_size);
+            
+          }
+
+         
+          // disk_read (filesys_disk, sector_idx, bounce);
+          // memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
         }
 
       /* Advance. */
@@ -294,8 +353,24 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
       if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE)
         {
-          /* Write full sector directly to disk. */
-          disk_write (filesys_disk, sector_idx, buffer + bytes_written);
+          
+
+          struct cache_entry *target_ce = cache_lookup(sector_idx);
+          if (target_ce != NULL) {
+            // cache hit.
+            memcpy (target_ce->block, buffer+bytes_written, DISK_SECTOR_SIZE);
+            target_ce->is_dirty = true;
+          } else {
+            /* Read full sector directly into caller's buffer. */
+            
+            target_ce = cache_in(sector_idx);
+            cache_in(sector_idx+1);
+            memcpy (target_ce->block, buffer+bytes_written, DISK_SECTOR_SIZE);
+            target_ce->is_dirty = true;
+          }
+
+
+          //disk_write (filesys_disk, sector_idx, buffer + bytes_written);
         }
       else
         {
@@ -310,12 +385,48 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
           /* If the sector contains data before or after the chunk
              we're writing, then we need to read in the sector
              first.  Otherwise we start with a sector of all zeros. */
+
           if (sector_ofs > 0 || chunk_size < sector_left)
-            disk_read (filesys_disk, sector_idx, bounce);
+            { 
+              struct cache_entry* target_ce = cache_lookup(sector_idx);
+              if(target_ce != NULL){
+                //cache hit
+                memcpy(target_ce->block+sector_ofs,buffer+bytes_written, chunk_size);
+              }else{
+                target_ce=cache_in(sector_idx);
+                cache_in(sector_idx+1);
+                memcpy(target_ce->block+sector_ofs,buffer+bytes_written,chunk_size);
+                target_ce->is_dirty = true;
+            }
+          }
+            
           else
-            memset (bounce, 0, DISK_SECTOR_SIZE);
-          memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
-          disk_write (filesys_disk, sector_idx, bounce);
+            {
+              memset (bounce, 0, DISK_SECTOR_SIZE);
+              
+              struct cache_entry* target_ce = cache_lookup(sector_idx);
+              if(target_ce != NULL){
+                //cache hit
+
+                memset(target_ce->block,0,DISK_SECTOR_SIZE);
+                memcpy(target_ce->block+sector_ofs,buffer+bytes_written, chunk_size);
+                target_ce->is_dirty=true;
+              }else{
+                target_ce=cache_in(sector_idx);
+                cache_in(sector_idx+1);
+                mmemset(target_ce->block,0,DISK_SECTOR_SIZE);
+                memcpy(target_ce->block+sector_ofs,buffer+bytes_written, sector_left);
+                target_ce->is_dirty=true;
+                }              
+
+              //memset (buffer+bytes_written, 0, chunk_size);
+
+            }
+
+
+
+          //memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
+          //disk_write (filesys_disk, sector_idx, bounce);
         }
 
       /* Advance. */

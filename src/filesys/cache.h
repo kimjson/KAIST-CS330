@@ -21,9 +21,8 @@ struct cache_entry {
 
 void cache_init (void);
 void cache_out (struct cahce_entry *c);
-void cache_in (struct _entry *sup_pte, bool writable);
-bool cache_find();
-struct cache_entry* cache_lookup(struct cache_entry *target_entry);
+struct cache_entry* cache_in(disk_sector_t first_sec_no);
+struct cache_entry* cache_lookup(disk_sector_t sec_no);
 // struct swap_entry *find_swap_by_upage(void *upage);
 
 #endif
