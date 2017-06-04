@@ -52,4 +52,5 @@ cmake-build-debug
 .ftpconfig
 .ftpignore
 .tags*
-62_project3-1.tar.gz
+*.tar.gz
+*.docx
