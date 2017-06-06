@@ -11,8 +11,10 @@ struct cache_block {
   bool is_exclusive;
   int num_readers;
   int num_writers;
-  int num_requests;
-  struct semaphore sema;
+  int num_requests; // for async read ahead processing.
+  struct lock lock;
+  struct condition no_writer;
+  struct condition no_reader;
   struct list_elem elem;
   char data[DISK_SECTOR_SIZE];
 };

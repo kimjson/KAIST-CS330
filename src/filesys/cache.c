@@ -24,10 +24,16 @@ cache_block_get(disk_sector_t sector, bool exclusive) {
   new_cache->num_readers = 0;
   new_cache->num_writers = 0;
   new_cache->num_requests = 0;
-  sema_init(&new_cache->sema, 0);
+  lock_init(&new_cache->lock);
+  cond_init(&new_cache->no_writer);
+  cond_init(&new_cache->no_reader);
   sema_down(&cache_sema);
   list_push_back(&cache_list, &new_cache->elem);
   sema_up(&cache_sema);
+
+  // cond wait
+
+
   return new_cache;
 }
 
@@ -36,6 +42,16 @@ void cache_block_put(struct cache_block *b) {
 }
 
 void *cache_block_read(struct cache_block *b) {
+  lock_acquire (b->lock);
+  while (b->num_readers > 0) {
+    cond_wait()
+  }
   disk_read (filesys_disk, b->disk_sector_id, b->data);
   return b->data;
+}
+
+void *cache_block_zero(struct cache_block *b) {
+  sema_down
+  memset (b->data, 0, DISK_SECTOR_SIZE);
+
 }
