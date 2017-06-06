@@ -98,16 +98,23 @@ lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  // printf("lookup name:%s\n",name);
+  //hex_dump(0,name,20,true);
+  
   for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
-       ofs += sizeof e) 
-    if (e.in_use && !strcmp (name, e.name)) 
+       ofs += sizeof e)
+    {
+      // printf("searching name:%s\n",e.name);
+      if (e.in_use && !strcmp (name, e.name)) 
       {
+        // printf("hit\n");
         if (ep != NULL)
           *ep = e;
         if (ofsp != NULL)
           *ofsp = ofs;
         return true;
       }
+    }
   return false;
 }
 
@@ -123,12 +130,12 @@ dir_lookup (const struct dir *dir, const char *name,
 
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
-  printf();
   if (lookup (dir, name, &e, NULL))
     *inode = inode_open (e.inode_sector);
   else
     *inode = NULL;
 
+  //printf("lookup end\n");
   return *inode != NULL;
 }
 

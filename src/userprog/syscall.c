@@ -217,6 +217,7 @@ static void handle_read(struct intr_frame *f) {
   int fd = *(int *)(f->esp + 4);
   char *buffer = *(char **)(f->esp + 8);
   unsigned size = *(unsigned *)(f->esp + 12);
+ // printf("handle read\n");
   if(is_invalid(f->esp+4)||is_invalid(f->esp+8)||is_invalid(f->esp+12)){
     handle_invalid(f);
   }
@@ -235,7 +236,9 @@ static void handle_read(struct intr_frame *f) {
     if (read_file == NULL) {
       f->eax = (uint32_t)-1;
     } else {
+      //printf("flag22222\n");
       int result = file_read(read_file, buffer, size);
+      //printf("result:%d\n",result);
       f->eax = (uint32_t)result;
     }
   } else {
@@ -272,6 +275,7 @@ static void handle_exec(struct intr_frame *f) {
   pid_t result = process_execute(cmd_line);
   // struct thread *child = find_child_by_tid((tid_t) result);
   // struct thread *child = list_entry(list_back(&thread_current()->child_list), struct thread, child_list_elem);
+  // printf("flag24680\n");
   struct thread_info *child_info = find_child_info_by_tid((tid_t) result);
   // struct thread_info *child_info = list_entry(list_back(&thread_current()->child_info_list), struct thread_info, elem);
   if (child_info != NULL) {

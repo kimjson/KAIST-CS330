@@ -21,43 +21,41 @@ cache_in(disk_sector_t first_sec_no){
 	sema_down(&cache_sema);
 	/* check cache_length*/
 	struct cache_entry *ce;
-	//printf("first_sec_no:%d\n",first_sec_no);
-	struct cache_entry* target_ce = cache_lookup(first_sec_no,true);
-	//printf("flag6");
-	if(target_ce!=NULL){
-		ce = target_ce;
-	}
-	else{
+//	printf("cahce in sector_no:%d\n",first_sec_no);
+
+	
 		//printf("flag7");
-		if(list_size(&cache)>=64){
-			struct cache_entry* victim_Cache = list_entry(list_pop_front(&cache),struct cache_entry, list_elem);
-			cache_out(victim_Cache);
-		}//
+	if(list_size(&cache)>=64){
+		struct cache_entry* victim_Cache = list_entry(list_pop_front(&cache),struct cache_entry, list_elem);
+		cache_out(victim_Cache);
+	}//
 		//printf("flag8");
 
-		ce = (struct cache_entry *) malloc(sizeof(struct cache_entry));
-		ce->first_sec_no = first_sec_no;
-		ce->is_dirty = false;
-		disk_read(filesys_disk, first_sec_no, (char *)ce->block);
-		list_push_back(&cache, &ce->list_elem);
+	ce = (struct cache_entry *) malloc(sizeof(struct cache_entry));
+	ce->first_sec_no = first_sec_no;
+	ce->is_dirty = false;
+	disk_read(filesys_disk, first_sec_no, (void *)ce->block);
+	list_push_back(&cache, &ce->list_elem);
 		
-	}
+	
 	sema_up(&cache_sema);
 	return ce;
 }
 
 void
 cache_out(struct cache_entry *c){
-	//printf("cahce out\n");
+//	printf("cahce out sector_no:%d\n",c->first_sec_no);
 	if (c->is_dirty) {
 		// write to disk
-		disk_write(filesys_disk, c->first_sec_no, (char *)c->block);
+		// printf("writing sector_no:%d\n",c->first_sec_no);
+		disk_write(filesys_disk, c->first_sec_no, (void *)c->block);
+//		printf("writing_content:%s\n",c->block);
 	}
 	list_remove(&c->list_elem);
 	free(c);
 }
 
-struct cache_entry*
+struct cache_entry* 
 cache_lookup(disk_sector_t sec_no, bool cache_in){
 	struct cache_entry *return_cache = NULL;
 	//printf("lookup\n");
@@ -83,4 +81,15 @@ cache_lookup(disk_sector_t sec_no, bool cache_in){
 	return return_cache;
 }
 
+void cache_close(void){
+
+	struct cache_entry *temp_cache;
+	struct list_elem *e;
+	for(e=list_begin(&cache); e != list_end(&cache); e=list_next(e)){
+		temp_cache = list_entry(e, struct cache_entry, list_elem);
+		if(temp_cache->is_dirty){
+			disk_write(filesys_disk,temp_cache->first_sec_no,(char *)temp_cache->block);
+		}
+	}
+}
 

@@ -41,7 +41,7 @@ void
 filesys_done (void) 
 {
   
-
+  cache_close();
   free_map_close ();
 
 }
@@ -75,18 +75,18 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
-  printf("filesys open\n");
+  // printf("filesys open\n");
 
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
 
-  printf("filename:%s\n",name);
+  // printf("filename:%s\n",name);
   if (dir != NULL)
   {
-    printf("dirrrrrr\n");
     dir_lookup (dir, name, &inode);
   }
   dir_close (dir);
+
 
   return file_open (inode);
 }

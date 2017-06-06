@@ -102,6 +102,7 @@ process_wait (tid_t child_tid)
 {
   struct thread_info *found_child_info = NULL;
   // struct thread *found_child = NULL;
+
   found_child_info = find_child_info_by_tid(child_tid);
   // found_child = find_child_by_tid(child_tid);
   if (found_child_info == NULL) {
@@ -368,6 +369,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   }
 
+
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -384,7 +386,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
   // Deny write
   thread_current()->self_file = file;
   file_deny_write(file);
-
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;

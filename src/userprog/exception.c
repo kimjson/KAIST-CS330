@@ -163,14 +163,17 @@ page_fault (struct intr_frame *f)
 
   //printf("PHYS_BASE:0x%08x",PHYS_BASE-8388608);
   //printf("fault_addr:0x%08x",fault_addr);
-  //printf("f->exp:0x%08x",f->esp);
+  // printf("f->esp:0x%08x",f->esp);
   struct sup_page_entry *sup_pte = sup_page_table_lookup(&thread_current()->sup_page_table, pg_round_down (fault_addr));
   if((fault_addr>=(f->esp)-32)&&(fault_addr >= PHYS_BASE - 8388608)&&(fault_addr < PHYS_BASE) && sup_pte == NULL)
   {
+    // printf("stac growth\n");
+
     is_stack_growth=true;
   }
   else
   {
+    // printf("not stac growth\n");
     is_stack_growth=false;
   }
 
