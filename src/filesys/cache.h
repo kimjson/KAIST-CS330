@@ -22,7 +22,7 @@ struct cache_entry {
 void cache_init (void);
 void cache_out (struct cahce_entry *c);
 struct cache_entry* cache_in(disk_sector_t first_sec_no);
-struct cache_entry* cache_lookup(disk_sector_t sec_no);
+struct cache_entry* cache_lookup(disk_sector_t sec_no, bool cache_in);
 // struct swap_entry *find_swap_by_upage(void *upage);
 
 #endif

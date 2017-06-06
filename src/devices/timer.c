@@ -7,6 +7,7 @@
 #include "threads/io.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include <stdbool.h>
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -111,7 +112,7 @@ timer_sleep (int64_t ticks)
   void *aux;
   struct thread *current_thread = thread_current();
   current_thread->alarm_time = start + ticks;
-  enum intr_level old_level = intr_diable();
+  enum intr_level old_level = intr_disable();
   list_insert_ordered(&sleep_list, &(current_thread->sleep_list_elem), &alarm_less_func, aux);
   thread_block();
   intr_set_level(old_level);

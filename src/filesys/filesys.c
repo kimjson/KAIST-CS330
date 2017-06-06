@@ -7,6 +7,7 @@
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "devices/disk.h"
+#include "filesys/cache.h"
 
 /* The disk that contains the file system. */
 struct disk *filesys_disk;
@@ -18,11 +19,14 @@ static void do_format (void);
 void
 filesys_init (bool format) 
 {
+ // printf("filesys init\n");
   filesys_disk = disk_get (0, 1);
   if (filesys_disk == NULL)
     PANIC ("hd0:1 (hdb) not present, file system initialization failed");
 
-  inode_init ();
+
+  cache_init();
+  inode_init();
   free_map_init ();
 
   if (format) 
@@ -36,7 +40,10 @@ filesys_init (bool format)
 void
 filesys_done (void) 
 {
+  
+
   free_map_close ();
+
 }
 
 /* Creates a file named NAME with the given INITIAL_SIZE.
@@ -46,6 +53,7 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size) 
 {
+  //printf("filesys create\n");
   disk_sector_t inode_sector = 0;
   struct dir *dir = dir_open_root ();
   bool success = (dir != NULL
@@ -67,11 +75,17 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
+  printf("filesys open\n");
+
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
 
+  printf("filename:%s\n",name);
   if (dir != NULL)
+  {
+    printf("dirrrrrr\n");
     dir_lookup (dir, name, &inode);
+  }
   dir_close (dir);
 
   return file_open (inode);
@@ -84,6 +98,8 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
+    //printf("filesys remove\n");
+
   struct dir *dir = dir_open_root ();
   bool success = dir != NULL && dir_remove (dir, name);
   dir_close (dir); 
@@ -95,6 +111,8 @@ filesys_remove (const char *name)
 static void
 do_format (void)
 {
+   // printf("do format\n");
+
   printf ("Formatting file system...");
   free_map_create ();
   if (!dir_create (ROOT_DIR_SECTOR, 16))
