@@ -24,12 +24,10 @@ cache_in(disk_sector_t first_sec_no){
 //	printf("cahce in sector_no:%d\n",first_sec_no);
 
 	
-		//printf("flag7");
 	if(list_size(&cache)>=64){
 		struct cache_entry* victim_Cache = list_entry(list_pop_front(&cache),struct cache_entry, list_elem);
 		cache_out(victim_Cache);
-	}//
-		//printf("flag8");
+	}
 
 	ce = (struct cache_entry *) malloc(sizeof(struct cache_entry));
 	ce->first_sec_no = first_sec_no;
