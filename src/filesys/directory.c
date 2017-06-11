@@ -98,7 +98,7 @@ lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
-  // printf("lookup name:%s\n",name);
+  printf("lookup name:%s\n",name);
   //hex_dump(0,name,20,true);
   
   for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
@@ -135,7 +135,8 @@ dir_lookup (const struct dir *dir, const char *name,
   else
     *inode = NULL;
 
-  //printf("lookup end\n");
+
+  printf("lookup end\n");
   return *inode != NULL;
 }
 
@@ -155,6 +156,9 @@ dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  hex_dump(0,name,15,true);
+
+  printf("adding name:%s\n",name);
   /* Check NAME for validity. */
   if (*name == '\0' || strlen (name) > NAME_MAX)
     return false;
@@ -179,6 +183,7 @@ dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector)
   e.in_use = true;
   strlcpy (e.name, name, sizeof e.name);
   e.inode_sector = inode_sector;
+  
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
 
  done:

@@ -12,11 +12,11 @@ struct file *
 file_open (struct inode *inode) 
 {
   struct file *file = calloc (1, sizeof *file);
+  //printf("open+file\n");
   //printf("open\n");
   if (inode != NULL && file != NULL)
     {
-    //  printf("open1\n");
-
+     // printf("open1\n");
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
@@ -108,6 +108,7 @@ off_t
 file_write_at (struct file *file, const void *buffer, off_t size,
                off_t file_ofs) 
 {
+  // printf("file_write\n");
   return inode_write_at (file->inode, buffer, size, file_ofs);
 }
 

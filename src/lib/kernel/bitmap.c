@@ -357,6 +357,7 @@ bitmap_read (struct bitmap *b, struct file *file)
 bool
 bitmap_write (const struct bitmap *b, struct file *file)
 {
+  printf("bitmap_write\n");
   off_t size = byte_cnt (b->bit_cnt);
   return file_write_at (file, b->bits, size, 0) == size;
 }

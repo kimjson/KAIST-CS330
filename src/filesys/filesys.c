@@ -19,7 +19,7 @@ static void do_format (void);
 void
 filesys_init (bool format) 
 {
- // printf("filesys init\n");
+  //printf("filesys init\n");
   filesys_disk = disk_get (0, 1);
   if (filesys_disk == NULL)
     PANIC ("hd0:1 (hdb) not present, file system initialization failed");
@@ -53,13 +53,39 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size) 
 {
-  //printf("filesys create\n");
+  printf("filesys create\n");
   disk_sector_t inode_sector = 0;
   struct dir *dir = dir_open_root ();
-  bool success = (dir != NULL
-                  && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size)
-                  && dir_add (dir, name, inode_sector));
+  printf("name:%s\n",name);
+  // char * new_name;
+  // strlcpy(new_name,name,15);
+  hex_dump(0,name,15,true);
+
+
+  
+  free_map_allocate (1, &inode_sector);
+  printf("flag1111111111111111111111name:%s\n",name);
+
+  inode_create (inode_sector, initial_size);
+  
+    printf("flag2name3333333333333:%s\n",name);
+
+  bool success=dir_add (dir, name, inode_sector);
+  printf("flag3444444444444444444444444name:%s\n",name);
+  
+  
+  
+  // bool success = (dir != NULL
+                  // && free_map_allocate (1, &inode_sector)
+                  // && inode_create (inode_sector, initial_size)
+                  // && dir_add (dir, name, inode_sector));
+  
+
+  hex_dump(0,name,15,true);
+
+
+  printf("sucesssssssssssssssssssssssssssssss\n");
+
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);
@@ -80,7 +106,7 @@ filesys_open (const char *name)
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
 
-  // printf("filename:%s\n",name);
+  printf("filesys open filename:%s\n",name);
   if (dir != NULL)
   {
     dir_lookup (dir, name, &inode);
@@ -115,6 +141,7 @@ do_format (void)
 
   printf ("Formatting file system...");
   free_map_create ();
+
   if (!dir_create (ROOT_DIR_SECTOR, 16))
     PANIC ("root directory creation failed");
   free_map_close ();

@@ -91,6 +91,9 @@ fsutil_put (char **argv)
 
   printf ("Putting '%s' into the file system...\n", file_name);
 
+  //printf("flag1 fsuitl_put filename:%s\n",file_name);
+
+
   /* Allocate buffer. */
   buffer = malloc (DISK_SECTOR_SIZE);
   if (buffer == NULL)
@@ -109,12 +112,21 @@ fsutil_put (char **argv)
   if (size < 0)
     PANIC ("%s: invalid file size %d", file_name, size);
   
+  printf("fsuitl_put filename:%s\n",file_name);
+
   /* Create destination file. */
   if (!filesys_create (file_name, size))
     PANIC ("%s: create failed", file_name);
+
+//this time file name changed
+  printf("filename:%s\n",file_name);
+
   dst = filesys_open (file_name);
   if (dst == NULL)
     PANIC ("%s: open failed", file_name);
+
+  
+  printf("fsutill flag1\n");
 
   /* Do copy. */
   while (size > 0)
@@ -126,6 +138,8 @@ fsutil_put (char **argv)
                file_name, size);
       size -= chunk_size;
     }
+
+  //printf("fsutil filag2\n");
 
   /* Finish up. */
   file_close (dst);
