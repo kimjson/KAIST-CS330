@@ -19,7 +19,8 @@ struct inode_disk
     disk_sector_t start;                /* First data sector. */
     off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
-    uint32_t unused[125];               /* Not used. */
+    bool is_directory;
+    uint32_t unused[124];               /* Not used. */
   };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -32,9 +33,6 @@ bytes_to_sectors (off_t size)
 
 /* In-memory inode. */
 struct inode
-
-
-
   {
     struct list_elem elem;              /* Element in inode list. */
     disk_sector_t sector;               /* Sector number of disk location. */
@@ -101,14 +99,14 @@ inode_create (disk_sector_t sector, off_t length)
         {
 
           //disk_write (filesys_disk, sector, disk_inode);
-          
+
           // printf("sector:%d\n",sector);
           struct cache_entry* target_ce = cache_lookup(sector,false);
 
 
           if(target_ce!=NULL){
             //cache hit
-  
+
             // printf("target->ce:%d\n", target_ce->first_sec_no);
             memcpy(target_ce->block,disk_inode,DISK_SECTOR_SIZE);
             target_ce->is_dirty=true;
@@ -167,7 +165,6 @@ inode_open (disk_sector_t sector)
 
       if (inode->sector == sector)
         {
-
           inode_reopen (inode);
           return inode;
         }
@@ -184,7 +181,7 @@ inode_open (disk_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-  
+
   // printf("indode sector:%d\n",sector);
   struct cache_entry* target_ce = cache_lookup(inode->sector,false);
 
@@ -193,10 +190,10 @@ inode_open (disk_sector_t sector)
   }else{
       target_ce = cache_in(inode->sector);
       //cache_in(inode->sector+1);
-      memcpy(&inode->data,target_ce->block,DISK_SECTOR_SIZE);  
+      memcpy(&inode->data,target_ce->block,DISK_SECTOR_SIZE);
   }
   //disk_read (filesys_disk, inode->sector, &inode->data);
-  
+
 
   return inode;
 }
@@ -298,7 +295,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
           if (target_ce == NULL) {
             // cache miss
             target_ce = cache_in(sector_idx);
-          } 
+          }
           memcpy (buffer + bytes_read, target_ce->block, DISK_SECTOR_SIZE);
 
           //printf("read:%s\n",target_ce->block);
@@ -318,10 +315,10 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
           if (target_ce == NULL) {
             // cache hit.
             target_ce = cache_in(sector_idx);
-          } 
+          }
 
           memcpy (buffer + bytes_read, target_ce->block+sector_ofs, chunk_size);
-          
+
           // disk_read (filesys_disk, sector_idx, bounce);
           // memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
         }
@@ -378,7 +375,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
       if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE)
         {
-          
+
           // printf("flag11111\n");
           struct cache_entry *target_ce = cache_lookup(sector_idx,false);
           if (target_ce != NULL) {
@@ -387,7 +384,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
             target_ce->is_dirty = true;
           } else {
             /* Read full sector directly into caller's buffer. */
-            
+
             target_ce = cache_in(sector_idx);
             //cache_in(sector_idx+1);
             memcpy (target_ce->block, buffer+bytes_written, DISK_SECTOR_SIZE);
@@ -412,7 +409,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
              first.  Otherwise we start with a sector of all zeros. */
 
           if (sector_ofs > 0 || chunk_size < sector_left)
-            { 
+            {
               struct cache_entry* target_ce = cache_lookup(sector_idx,false);
               if(target_ce != NULL){
                 //cache hit
@@ -427,11 +424,11 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                   //printf("write:%s\n",target_ce->block);
 
           }
-            
+
           else
             {
             //  memset (bounce, 0, DISK_SECTOR_SIZE);
-              
+
               struct cache_entry* target_ce = cache_lookup(sector_idx,false);
               //printf("secotr_left:%d\n",sector_left);
               //printf("chunk_size:%d\n",chunk_size);
@@ -450,7 +447,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                 //memcpy(target_ce->block+sector_ofs,buffer+bytes_written, chunk_size);
 
                 target_ce->is_dirty=true;
-                }              
+                }
 
               //memset (buffer+bytes_written, 0, chunk_size);
                       //printf("write:%s\n",target_ce->block);

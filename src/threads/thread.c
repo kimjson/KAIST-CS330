@@ -90,6 +90,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  initial_thread->curr_dir = dir_open_root (void);
 }
 
 struct thread *find_child_by_tid(tid_t tid) {
@@ -222,6 +223,7 @@ thread_create (const char *name, int priority,
 
   tid = t->tid = allocate_tid ();
   t->parent_thread = thread_current();
+  t->curr_dir = thread_current()->curr_dir;
   list_push_back(&thread_current()->child_list, &t->child_list_elem);
 
   struct thread_info *t_info = malloc(sizeof(struct thread_info));

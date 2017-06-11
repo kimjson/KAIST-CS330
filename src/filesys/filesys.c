@@ -17,7 +17,7 @@ static void do_format (void);
 /* Initializes the file system module.
    If FORMAT is true, reformats the file system. */
 void
-filesys_init (bool format) 
+filesys_init (bool format)
 {
  // printf("filesys init\n");
   filesys_disk = disk_get (0, 1);
@@ -29,7 +29,7 @@ filesys_init (bool format)
   inode_init();
   free_map_init ();
 
-  if (format) 
+  if (format)
     do_format ();
 
   free_map_open ();
@@ -38,11 +38,12 @@ filesys_init (bool format)
 /* Shuts down the file system module, writing any unwritten data
    to disk. */
 void
-filesys_done (void) 
+filesys_done (void)
 {
-  
+
   cache_close();
   free_map_close ();
+  //close all the directories and their entries.
 
 }
 
@@ -51,18 +52,19 @@ filesys_done (void)
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
 bool
-filesys_create (const char *name, off_t initial_size) 
+filesys_create (const char *name, off_t initial_size)
 {
   //printf("filesys create\n");
   disk_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
+  struct dir *dir = thread_current()->curr_dir;
+  // struct dir *dir = dir_open_root ();
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size)
-                  && dir_add (dir, name, inode_sector));
-  if (!success && inode_sector != 0) 
+                  && dir_add (dir, name, inode_sector, dir->inode->data->sector));
+  if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
-  dir_close (dir);
+  // dir_close (dir);
 
   return success;
 }
@@ -77,7 +79,8 @@ filesys_open (const char *name)
 {
   // printf("filesys open\n");
 
-  struct dir *dir = dir_open_root ();
+  // struct dir *dir = dir_open_root ();
+  struct dir *dir = thread_current (void)->curr_dir;
   struct inode *inode = NULL;
 
   // printf("filename:%s\n",name);
@@ -96,13 +99,13 @@ filesys_open (const char *name)
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 bool
-filesys_remove (const char *name) 
+filesys_remove (const char *name)
 {
     //printf("filesys remove\n");
 
   struct dir *dir = dir_open_root ();
   bool success = dir != NULL && dir_remove (dir, name);
-  dir_close (dir); 
+  dir_close (dir);
 
   return success;
 }

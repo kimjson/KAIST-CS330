@@ -30,8 +30,18 @@ static void handle_write(struct intr_frame *);
 static void handle_seek(struct intr_frame *);
 static void handle_tell(struct intr_frame *);
 static void handle_close(struct intr_frame *);
+
+// syscall for project 3-2
 static void handle_mmap(struct intr_frame *);
 static void handle_munmap(struct intr_frame *);
+
+// syscall for project 4
+static void handle_chdir(struct intr_frame *);
+static void handle_mkdir(struct intr_frame *);
+static void handle_readdir(struct intr_frame *);
+static void handle_isdir(struct intr_frame *);
+static void handle_inumber(struct intr_frame *);
+
 
 static struct file *find_file_by_fd(int);
 struct lock lock;
@@ -118,6 +128,9 @@ static void handle_write(struct intr_frame *f) {
     putbuf(buffer, size);
   } else if (fd > 1) {
     struct file *found_file = find_file_by_fd(fd);
+    if (found_file->inode->data->is_directory) {
+      handle_invalid(f);
+    }
     lock_acquire(&lock);
     if (found_file == NULL || found_file->deny_write) {
       f->eax = (uint32_t) -1;
@@ -413,6 +426,94 @@ static void handle_munmap(struct intr_frame *f) {
       }
     }
 }
+
+static void handle_chdir (struct intr_frame *f) {
+  const char *dir = *(char **)(f->esp + 4);
+  struct dir *curr_dir;
+  char *dir_path, token;
+  struct inode *temp_inode;
+  bool success;
+  strlcpy(dir_path, dir, 128); // replace to max path size.
+  if (dir_path[0] == '/') {
+    //if absolute path, start from root.
+    dir_path++;
+    curr_dir = dir_open_root (void);
+  } else {
+    //if relative path, start from curr dir.
+    curr_dir = thread_current (void)->curr_dir;
+  }
+  for (token = strtok_r (dir_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
+    success = dir_lookup (curr_dir, token, &temp_inode);
+    free(curr_dir);
+    curr_dir = dir_open(temp_inode);
+  }
+  dir_close(thread_current (void)->curr_dir);
+  thread_current (void)->curr_dir = curr_dir;
+  f->eax = (uint32_t)success;
+}
+
+static void handle_mkdir (struct intr_frame *f) {
+  const char *dir = *(char **)(f->esp + 4);
+  struct dir *curr_dir;
+  char *dir_path, token;
+  struct inode *temp_inode;
+  bool go_more, success;
+  disk_sector_t inode_sector = 0;
+  strlcpy(dir_path, dir, 128); // replace to max path size.
+  if (dir_path[0] == '/') {
+    //if absolute path, start from root.
+    dir_path++;
+    curr_dir = dir_open_root (void);
+  } else {
+    //if relative path, start from curr dir.
+    curr_dir = thread_current (void)->curr_dir;
+  }
+  for (token = strtok_r (dir_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
+    go_more = dir_lookup (curr_dir, token, &temp_inode);
+    //at last directory. in other words, temp_inode is null.
+    if (!go_more) {
+      // make new directory.
+      success = (curr_dir != NULL
+                  && free_map_allocate (1, &inode_sector)
+                  && inode_create (inode_sector, 16 * sizeof (struct dir_entry))
+                  && dir_add (curr_dir, token, inode_sector)
+                  && dir_add(curr_dir, ".", inode_sector);
+                  && dir_add(curr_dir, "..", curr_dir->inode->data->sector);
+                );
+    } else {
+      free(curr_dir);
+      curr_dir = dir_open(temp_inode);
+    }
+  }
+  f->eax = (uint32_t)success;
+}
+
+static void handle_readdir (struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  char *name = *(char **)(f->esp + 8);
+  bool success;
+  struct file *dir_file = find_file_by_fd(fd);
+  success = dir_file->inode->data->is_directory;
+  if (!success) {
+    f->eax = (uint32_t) success;
+    return;
+  } else {
+    struct dir *dir = dir_open(dir_file->inode);
+    dir_lookup (const struct dir *dir, const char *name)
+    dir_close(dir);
+  }
+}
+
+static void handle_isdir (struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  f->eax = (uint32_t) file_get_inode(find_file_by_fd(fd))->data->is_directory;
+}
+
+static void handle_inumber (struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  f->eax = (uint32_t) inode_get_inumber(file_get_inode(find_file_by_fd(fd)));
+}
+
 
 static void
 syscall_handler (struct intr_frame *f)// UNUSED)

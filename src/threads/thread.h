@@ -129,6 +129,9 @@ struct thread
     struct thread_info *info;
     struct list mapping_list;
 
+    struct dir *curr_dir;
+    struct dir *parent_dir;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
