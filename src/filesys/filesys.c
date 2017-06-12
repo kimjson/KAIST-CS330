@@ -101,13 +101,32 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name)
 {
-    //printf("filesys remove\n");
+  char *copied_name;
+  const char *file_name;
+  struct dir *dir;
+  struct dir *dir_file;
+  bool success;
+  struct inode *inode = NULL;
 
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
-  dir_close (dir);
-
-  return success;
+  strlcpy (copied_name, name, strlen(name)+1);
+  file_name = dir_split_name(copied_name);
+  dir = dir_open_path(copied_name);
+  // if file is directory and not empty, fails.
+  success = dir_lookup (dir, file_name, &inode);
+  if (!inode->data->is_directory) {
+    success = success && dir_remove(dir, file_name);
+    dir_close(dir);
+    return success;
+  }
+  dir_file = dir_open(inode);
+  if (dir_empty(dir_file)) {
+    success = success && dir_remove(dir, file_name);
+    dir_close(dir_file);
+    dir_close(dir);
+    return success;
+  }
+  dir_close(dir);
+  return false;
 }
 
 /* Formats the file system. */

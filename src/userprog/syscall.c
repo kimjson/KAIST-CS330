@@ -193,9 +193,9 @@ static void handle_open(struct intr_frame *f) {
 }
 
 static void handle_remove(struct intr_frame *f) {
-  char *file_name = *(char **)(f->esp + 4);
+  char *file = *(char **)(f->esp + 4);
   lock_acquire(&lock);
-  filesys_remove(file_name);
+  f->eax = (uint32_t) filesys_remove(file);
   lock_release(&lock);
 }
 
@@ -460,35 +460,15 @@ static void handle_mkdir (struct intr_frame *f) {
 static void handle_readdir (struct intr_frame *f) {
   int fd = *(int *)(f->esp + 4);
   char *name = *(char **)(f->esp + 8);
-  bool success;
-  struct file *dir_file = find_file_by_fd(fd);
-  success = dir_file->inode->data->is_directory;
-  if (!success) {
-    f->eax = (uint32_t) success;
+  struct file *file = find_file_by_fd(fd);
+  struct dir *dir;
+  if (!file->inode->data->is_directory) {
+    f->eax = (uint32_t) false;
     return;
-  } else {
-    struct dir_entry e;
-    struct dir_entry *ep;
-    size_t ofs;
-    struct dir *dir = dir_open(dir_file->inode);
-    // inode_read_at (dir->inode, &e, sizeof e, dir_file->readdir_ofs)
-    for (ofs = dir_file->readdir_ofs; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
-         ofs += sizeof e)
-      {
-        // printf("searching name:%s\n",e.name);
-        if (e.in_use)
-        {
-          strlcpy(name, e.name, NAME_MAX + 1);
-          dir_file->readdir_ofs = ofs + sizeof e;
-          success = success && true;
-          break;
-        } else {
-          success = success && false;
-        }
-      }
-    dir_close(dir);
-    f->eax = (uint32_t) success;
   }
+  dir = dir_open(file->inode);
+  f->eax = (uint32_t) dir_readdir(dir, name);
+  dir_close(dir);
 }
 
 static void handle_isdir (struct intr_frame *f) {

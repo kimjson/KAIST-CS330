@@ -275,11 +275,23 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e)
     {
       dir->pos += sizeof e;
-      if (e.in_use)
+      if (e.in_use && strcmp (e.name, ".") != 0 && strcmp(e.name, ".."))
         {
           strlcpy (name, e.name, NAME_MAX + 1);
           return true;
         }
     }
   return false;
+}
+
+bool
+dir_empty (struct dir *dir)
+{
+  char name[NAME_MAX+1];
+  bool is_empty;
+  off_t pos = dir->pos;
+  dir->pos = 0;
+  is_empty = dir_readdir(dir, name);
+  dir->pos = pos;
+  return is_empty;
 }
