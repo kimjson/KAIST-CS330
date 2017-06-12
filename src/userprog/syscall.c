@@ -128,11 +128,8 @@ static void handle_write(struct intr_frame *f) {
     putbuf(buffer, size);
   } else if (fd > 1) {
     struct file *found_file = find_file_by_fd(fd);
-    if (found_file->inode->data->is_directory) {
-      handle_invalid(f);
-    }
     lock_acquire(&lock);
-    if (found_file == NULL || found_file->deny_write) {
+    if (found_file == NULL || found_file->deny_write || found_file->inode->data->is_directory) {
       f->eax = (uint32_t) -1;
     } else {
       int result = file_write(found_file, buffer, size);
@@ -212,7 +209,11 @@ static void handle_close(struct intr_frame *f) {
     struct file *f = list_entry (e2, struct file, elem_for_thread);
     if (f->fd == fd) {
       list_remove(&f->elem_for_thread);
-      file_close (f);
+      if (f->inode->data->is_directory) {
+        dir_close(f);
+      } else {
+        file_close (f);
+      }
       break;
     }
 
@@ -246,7 +247,7 @@ static void handle_read(struct intr_frame *f) {
     f->eax = (uint32_t)i;
   } else if (fd > 1) {
     struct file *read_file = find_file_by_fd(fd);
-    if (read_file == NULL) {
+    if (read_file == NULL || read_file->inode->data->is_directory) {
       f->eax = (uint32_t)-1;
     } else {
       //printf("flag22222\n");
@@ -286,11 +287,7 @@ static void handle_exec(struct intr_frame *f) {
     handle_invalid(f);
   }
   pid_t result = process_execute(cmd_line);
-  // struct thread *child = find_child_by_tid((tid_t) result);
-  // struct thread *child = list_entry(list_back(&thread_current()->child_list), struct thread, child_list_elem);
-  // printf("flag24680\n");
   struct thread_info *child_info = find_child_info_by_tid((tid_t) result);
-  // struct thread_info *child_info = list_entry(list_back(&thread_current()->child_info_list), struct thread_info, elem);
   if (child_info != NULL) {
     sema_down(&child_info->exec_sema);
     if (!child_info->load_success) {
@@ -428,63 +425,35 @@ static void handle_munmap(struct intr_frame *f) {
 }
 
 static void handle_chdir (struct intr_frame *f) {
+  struct dir *changed;
   const char *dir = *(char **)(f->esp + 4);
-  struct dir *curr_dir;
-  char *dir_path, token;
-  struct inode *temp_inode;
-  bool success;
-  strlcpy(dir_path, dir, 128); // replace to max path size.
-  if (dir_path[0] == '/') {
-    //if absolute path, start from root.
-    dir_path++;
-    curr_dir = dir_open_root (void);
+  changed = dir_open_path(dir);
+  if (changed == NULL) {
+    f->eax = (uint32_t)false;
   } else {
-    //if relative path, start from curr dir.
-    curr_dir = thread_current (void)->curr_dir;
+    dir_close(thread_current (void)->curr_dir);
+    thread_current (void)->curr_dir = dir_open_path(dir);
+    f->eax = (uint32_t)true;
   }
-  for (token = strtok_r (dir_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
-    success = dir_lookup (curr_dir, token, &temp_inode);
-    free(curr_dir);
-    curr_dir = dir_open(temp_inode);
-  }
-  dir_close(thread_current (void)->curr_dir);
-  thread_current (void)->curr_dir = curr_dir;
-  f->eax = (uint32_t)success;
 }
 
 static void handle_mkdir (struct intr_frame *f) {
+  struct char *new_dir;
   const char *dir = *(char **)(f->esp + 4);
-  struct dir *curr_dir;
-  char *dir_path, token;
+  char *dir_path, *parent;
   struct inode *temp_inode;
-  bool go_more, success;
+  strlcpy(dir_path, dir, strlen(dir)+1); // replace to max path size.
+  new_dir = dir_split_name(dir_path);
+  parent = dir_open_path(dir_path);
   disk_sector_t inode_sector = 0;
-  strlcpy(dir_path, dir, 128); // replace to max path size.
-  if (dir_path[0] == '/') {
-    //if absolute path, start from root.
-    dir_path++;
-    curr_dir = dir_open_root (void);
-  } else {
-    //if relative path, start from curr dir.
-    curr_dir = thread_current (void)->curr_dir;
-  }
-  for (token = strtok_r (dir_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
-    go_more = dir_lookup (curr_dir, token, &temp_inode);
-    //at last directory. in other words, temp_inode is null.
-    if (!go_more) {
-      // make new directory.
-      success = (curr_dir != NULL
+  success = (parent != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, 16 * sizeof (struct dir_entry))
-                  && dir_add (curr_dir, token, inode_sector)
-                  && dir_add(curr_dir, ".", inode_sector);
-                  && dir_add(curr_dir, "..", curr_dir->inode->data->sector);
+                  && dir_add (parent, new_dir, inode_sector)
+                  && dir_add(parent, ".", inode_sector);
+                  && dir_add(parent, "..", curr_dir->inode->data->sector);
                 );
-    } else {
-      free(curr_dir);
-      curr_dir = dir_open(temp_inode);
-    }
-  }
+  dir_close(parent);
   f->eax = (uint32_t)success;
 }
 
@@ -498,9 +467,27 @@ static void handle_readdir (struct intr_frame *f) {
     f->eax = (uint32_t) success;
     return;
   } else {
+    struct dir_entry e;
+    struct dir_entry *ep;
+    size_t ofs;
     struct dir *dir = dir_open(dir_file->inode);
-    dir_lookup (const struct dir *dir, const char *name)
+    // inode_read_at (dir->inode, &e, sizeof e, dir_file->readdir_ofs)
+    for (ofs = dir_file->readdir_ofs; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
+         ofs += sizeof e)
+      {
+        // printf("searching name:%s\n",e.name);
+        if (e.in_use)
+        {
+          strlcpy(name, e.name, NAME_MAX + 1);
+          dir_file->readdir_ofs = ofs + sizeof e;
+          success = success && true;
+          break;
+        } else {
+          success = success && false;
+        }
+      }
     dir_close(dir);
+    f->eax = (uint32_t) success;
   }
 }
 

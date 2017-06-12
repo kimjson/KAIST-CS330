@@ -18,6 +18,7 @@ struct file
   off_t pos;                  /* Current position. */
   bool deny_write;            /* Has file_deny_write() been called? */
   int mapping;
+  size_t readdir_ofs;            /* readdir start point if it's directory. */
 };
 
 /* Opening and closing files. */

@@ -49,6 +49,45 @@ dir_open (struct inode *inode)
     }
 }
 
+struct dir *
+dir_open_path(char *dir_path) {
+  char *copied_path, *token, *save_ptr;
+  struct dir *temp_dir;
+  struct inode *temp_inode;
+  bool go_more = true;
+  strlcpy (copied_path, dir_path, strlen(dir_path)+1);
+  if (copied_path[0] == '/') {
+    // absolute path
+    copied_path++;
+    temp_dir = dir_open_root();
+  } else {
+    temp_dir = thread_current (void)->curr_dir;
+  }
+  temp_dir = thread_current (void)->curr_dir;
+  for (token = strtok_r (copied_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
+    if (!dir_lookup (temp_dir, token, &temp_inode)) {
+      return NULL;
+    }
+    free(temp_dir);
+    temp_dir = dir_open(temp_inode);
+  }
+  return temp_dir;
+}
+
+// split path to produce parent path and name.
+// it changes input char pointer's content.
+char *
+dir_split_name(char *dir_path) {
+  char *pos;
+  for (pos=dir_path + strlen(dir_path)-1; pos >= dir_path; pos--) {
+    if (*pos == '/') {
+      *pos = '\0';
+      return pos+1;
+    }
+  }
+  return NULL;
+}
+
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
 struct dir *

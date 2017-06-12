@@ -77,21 +77,21 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
-  // printf("filesys open\n");
-
-  // struct dir *dir = dir_open_root ();
-  struct dir *dir = thread_current (void)->curr_dir;
+  char *copied_name;
+  const char *file_name;
+  struct dir *dir;
+  struct file *open_file;
   struct inode *inode = NULL;
-
-  // printf("filename:%s\n",name);
-  if (dir != NULL)
-  {
-    dir_lookup (dir, name, &inode);
+  strlcpy (copied_name, name, strlen(name)+1);
+  file_name = dir_split_name(copied_name)
+  dir = dir_open_path(copied_name);
+  if (dir != NULL) {
+    dir_lookup (dir, file_name, &inode);
   }
-  dir_close (dir);
-
-
-  return file_open (inode);
+  dir_close(dir);
+  open_file = file_open(inode);
+  open_file->is_directory = true;
+  return open_file;
 }
 
 /* Deletes the file named NAME.
