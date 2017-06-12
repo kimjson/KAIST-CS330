@@ -76,6 +76,10 @@ start_process (void *f_name)
     thread_exit();
   }
 
+  if (thread_current()->curr_dir == NULL) {
+    thread_current()->curr_dir = dir_open_root();
+  }
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its

@@ -8,6 +8,7 @@
 #include "filesys/directory.h"
 #include "devices/disk.h"
 #include "filesys/cache.h"
+#include "filesys/cache.c"
 
 /* The disk that contains the file system. */
 struct disk *filesys_disk;
@@ -33,6 +34,8 @@ filesys_init (bool format)
     do_format ();
 
   free_map_open ();
+
+
 }
 
 /* Shuts down the file system module, writing any unwritten data
@@ -54,14 +57,21 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size)
 {
-  //printf("filesys create\n");
+  // printf("filesys create\n");
   disk_sector_t inode_sector = 0;
-  struct dir *dir = thread_current()->curr_dir;
+  struct dir *dir;
+  char *copied_name;
+  char *file_name;
+  strlcpy (copied_name, name, strlen(name)+1);
+  file_name = dir_split_name(copied_name);
+  dir = dir_open_path(copied_name);
   // struct dir *dir = dir_open_root ();
-  bool success = (dir != NULL
-                  && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size)
-                  && dir_add (dir, name, inode_sector, dir->inode->data->sector));
+  bool success = (
+    dir != NULL &&
+    free_map_allocate (1, &inode_sector) &&
+    inode_create (inode_sector, initial_size) &&
+    dir_add (dir, file_name, inode_sector)
+  );
   if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
   // dir_close (dir);
@@ -83,14 +93,14 @@ filesys_open (const char *name)
   struct file *open_file;
   struct inode *inode = NULL;
   strlcpy (copied_name, name, strlen(name)+1);
-  file_name = dir_split_name(copied_name)
+  file_name = dir_split_name(copied_name);
   dir = dir_open_path(copied_name);
   if (dir != NULL) {
     dir_lookup (dir, file_name, &inode);
   }
   dir_close(dir);
   open_file = file_open(inode);
-  open_file->is_directory = true;
+  // inode_set_directory(file_get_inode(open_file), true);
   return open_file;
 }
 
@@ -113,7 +123,7 @@ filesys_remove (const char *name)
   dir = dir_open_path(copied_name);
   // if file is directory and not empty, fails.
   success = dir_lookup (dir, file_name, &inode);
-  if (!inode->data->is_directory) {
+  if (!inode_is_directory(inode)) {
     success = success && dir_remove(dir, file_name);
     dir_close(dir);
     return success;

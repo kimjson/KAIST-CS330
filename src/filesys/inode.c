@@ -95,6 +95,7 @@ inode_create (disk_sector_t sector, off_t length)
       size_t sectors = bytes_to_sectors (length);
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
+      disk_inode->is_directory = false;
       if (free_map_allocate (sectors, &disk_inode->start))
         {
 
@@ -501,4 +502,14 @@ off_t
 inode_length (const struct inode *inode)
 {
   return inode->data.length;
+}
+
+bool
+inode_is_directory(struct inode *inode) {
+  return inode->data.is_directory;
+}
+
+void
+inode_set_directory(struct inode *inode, bool b) {
+  inode->data.is_directory = b;
 }

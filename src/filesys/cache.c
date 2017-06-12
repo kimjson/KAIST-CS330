@@ -7,7 +7,7 @@ struct list cache;
 
 
 void
-cache_init(void){
+cache_init(){
 	//printf("cache-init\n");
 	list_init(&cache);
 	sema_init(&cache_sema, 1);
@@ -23,7 +23,7 @@ cache_in(disk_sector_t first_sec_no){
 	struct cache_entry *ce;
 //	printf("cahce in sector_no:%d\n",first_sec_no);
 
-	
+
 		//printf("flag7");
 	if(list_size(&cache)>=64){
 		struct cache_entry* victim_Cache = list_entry(list_pop_front(&cache),struct cache_entry, list_elem);
@@ -36,8 +36,8 @@ cache_in(disk_sector_t first_sec_no){
 	ce->is_dirty = false;
 	disk_read(filesys_disk, first_sec_no, (void *)ce->block);
 	list_push_back(&cache, &ce->list_elem);
-		
-	
+
+
 	sema_up(&cache_sema);
 	return ce;
 }
@@ -55,12 +55,12 @@ cache_out(struct cache_entry *c){
 	free(c);
 }
 
-struct cache_entry* 
+struct cache_entry*
 cache_lookup(disk_sector_t sec_no, bool cache_in){
 	struct cache_entry *return_cache = NULL;
 	//printf("lookup\n");
 	if(!cache_in)
-	{ 
+	{
 		sema_down(&cache_sema);
 	}
 	struct list_elem *e;
@@ -74,7 +74,7 @@ cache_lookup(disk_sector_t sec_no, bool cache_in){
 
 	}
 	if(!cache_in)
-	{ 
+	{
 		sema_up(&cache_sema);
 	}
 	//printf("lookup end\n");
@@ -92,4 +92,3 @@ void cache_close(void){
 		}
 	}
 }
-

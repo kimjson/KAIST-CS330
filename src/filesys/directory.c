@@ -5,6 +5,7 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/thread.h"
 
 /* A directory. */
 struct dir
@@ -61,9 +62,8 @@ dir_open_path(char *dir_path) {
     copied_path++;
     temp_dir = dir_open_root();
   } else {
-    temp_dir = thread_current (void)->curr_dir;
+    temp_dir = thread_current()->curr_dir;
   }
-  temp_dir = thread_current (void)->curr_dir;
   for (token = strtok_r (copied_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
     if (!dir_lookup (temp_dir, token, &temp_inode)) {
       return NULL;
@@ -294,4 +294,9 @@ dir_empty (struct dir *dir)
   is_empty = dir_readdir(dir, name);
   dir->pos = pos;
   return is_empty;
+}
+
+off_t
+dir_size_entry(void) {
+  return sizeof (struct dir_entry);
 }

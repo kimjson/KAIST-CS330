@@ -18,6 +18,7 @@ struct file
   off_t pos;                  /* Current position. */
   bool deny_write;            /* Has file_deny_write() been called? */
   int mapping;
+  bool is_directory;
 };
 
 /* Opening and closing files. */
