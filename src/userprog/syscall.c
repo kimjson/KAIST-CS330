@@ -127,10 +127,10 @@ static void handle_write(struct intr_frame *f) {
   if (fd == 1) {
     putbuf(buffer, size);
   } else if (fd > 1) {
-    printf("write fd:%d\n",fd);
+    // printf("write fd:%d\n",fd);
     struct file *found_file = find_file_by_fd(fd);
     lock_acquire(&lock);
-    printf("found file is directory: %d\n", inode_is_directory(file_get_inode (found_file)));
+    // printf("found file is directory: %d\n", inode_is_directory(file_get_inode (found_file)));
     if (found_file == NULL || found_file->deny_write || inode_is_directory(file_get_inode (found_file))) {
       f->eax = (uint32_t) -1;
     } else {
@@ -197,8 +197,14 @@ static void handle_open(struct intr_frame *f) {
 static void handle_remove(struct intr_frame *f) {
   char *file = *(char **)(f->esp + 4);
   lock_acquire(&lock);
-  f->eax = (uint32_t) filesys_remove(file);
-  lock_release(&lock);
+  if (file_get_inode (filesys_open(file)) == dir_get_inode (thread_current()->curr_dir)) {
+    // cannot remove current directory
+    f->eax = (uint32_t) false;
+    lock_release(&lock);
+  } else {
+    f->eax = (uint32_t) filesys_remove(file);
+    lock_release(&lock);
+  }
 }
 
 static void handle_close(struct intr_frame *f) {
@@ -233,7 +239,7 @@ static void handle_read(struct intr_frame *f) {
   int fd = *(int *)(f->esp + 4);
   char *buffer = *(char **)(f->esp + 8);
   unsigned size = *(unsigned *)(f->esp + 12);
- // printf("handle read\n");
+  // printf("handle read\n");
   if(is_invalid(f->esp+4)||is_invalid(f->esp+8)||is_invalid(f->esp+12)){
     handle_invalid(f);
   }
@@ -249,12 +255,17 @@ static void handle_read(struct intr_frame *f) {
     f->eax = (uint32_t)i;
   } else if (fd > 1) {
     struct file *read_file = find_file_by_fd(fd);
+    printf("reading file\'s fd: %d\n", fd);
+    printf("reading file\'s address: 0x%08x\n", read_file);
     if (read_file == NULL || inode_is_directory(file_get_inode (read_file))) {
+      printf("flag111111111111111111\n");
       f->eax = (uint32_t)-1;
     } else {
-      //printf("flag22222\n");
+      printf("flag22222222222222222\n");
+      //printf("bytes size: %d\n", size);
+
       int result = file_read(read_file, buffer, size);
-      //printf("result:%d\n",result);
+      printf("bytes read: %d\n", result);
       f->eax = (uint32_t)result;
     }
   } else {

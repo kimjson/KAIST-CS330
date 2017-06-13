@@ -95,7 +95,7 @@ dir_open_path(char *dir_path) {
     temp_dir = dir_reopen(thread_current()->curr_dir);
   }
   for (token = strtok_r (copied_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
-    printf("token: %s\n", token);
+    // printf("token: %s\n", token);
     if (strlen(token) == 0) {
       break;
     }
@@ -315,12 +315,12 @@ bool
 dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
-
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e)
     {
       dir->pos += sizeof e;
-      if (e.in_use && strcmp (e.name, ".") != 0 && strcmp(e.name, ".."))
+      if (e.in_use && strcmp (e.name, ".") != 0 && strcmp(e.name, "..") != 0)
         {
+          // printf("e:%s\n",e.name);
           strlcpy (name, e.name, NAME_MAX + 1);
           return true;
         }
@@ -335,7 +335,8 @@ dir_empty (struct dir *dir)
   bool is_empty;
   off_t pos = dir->pos;
   dir->pos = 0;
-  is_empty = dir_readdir(dir, name);
+  is_empty = !dir_readdir(dir, name);
+  // printf("is_empty:%d\n",is_empty);
   dir->pos = pos;
   return is_empty;
 }
