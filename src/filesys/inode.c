@@ -76,7 +76,7 @@ inode_init (void)
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (disk_sector_t sector, off_t length)
+inode_create (disk_sector_t sector, off_t length,bool is_dir)
 {
   // printf("print create\n");
 
@@ -96,7 +96,7 @@ inode_create (disk_sector_t sector, off_t length)
       size_t sectors = bytes_to_sectors (length);
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
-      disk_inode->is_directory = false;
+      disk_inode->is_directory = is_dir;
       if (free_map_allocate (sectors, &disk_inode->start))
         {
 
@@ -183,7 +183,11 @@ inode_open (disk_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-
+  // printf("inode disk is directory: %d\n", inode->data.is_directory);
+  //inode->is_directory = inode->data.is_directory;
+  // if (inode->is_directory != true) {
+  //   inode->is_directory = false;
+  // }
   // printf("indode sector:%d\n",sector);
   struct cache_entry* target_ce = cache_lookup(inode->sector,false);
 
@@ -506,12 +510,12 @@ inode_length (const struct inode *inode)
 bool
 inode_is_directory(struct inode *inode) {
   // printf("0x%08x is directory: %d\n", inode, inode->data.is_directory);
-  return inode->is_directory;
+  return inode->data.is_directory;
 }
 
 void
 inode_set_directory(struct inode *inode, bool b) {
-  inode->is_directory = b;
+  inode->data.is_directory = b;
 }
 
 // bool

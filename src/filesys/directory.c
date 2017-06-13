@@ -28,10 +28,10 @@ bool
 dir_create (disk_sector_t sector, size_t entry_cnt, struct dir *parent_dir, char *name)
 {
   struct dir *new_dir;
-  bool success = inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  bool success = inode_create (sector, entry_cnt * sizeof (struct dir_entry),true);
   if (success) {
     struct inode *new_inode = inode_open(sector);
-    inode_set_directory(new_inode, true);
+    // inode_set_directory(new_inode, true);
     new_dir = dir_open(new_inode);
     if (sector == ROOT_DIR_SECTOR) {
       success = success && (

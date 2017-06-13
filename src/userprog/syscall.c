@@ -132,8 +132,10 @@ static void handle_write(struct intr_frame *f) {
     lock_acquire(&lock);
     // printf("found file is directory: %d\n", inode_is_directory(file_get_inode (found_file)));
     if (found_file == NULL || found_file->deny_write || inode_is_directory(file_get_inode (found_file))) {
+      //printf("flag111111\n");
       f->eax = (uint32_t) -1;
     } else {
+      //printf("flag22222\n");
       int result = file_write(found_file, buffer, size);
       f->eax = (uint32_t)result;
     }
@@ -255,17 +257,10 @@ static void handle_read(struct intr_frame *f) {
     f->eax = (uint32_t)i;
   } else if (fd > 1) {
     struct file *read_file = find_file_by_fd(fd);
-    printf("reading file\'s fd: %d\n", fd);
-    printf("reading file\'s address: 0x%08x\n", read_file);
     if (read_file == NULL || inode_is_directory(file_get_inode (read_file))) {
-      printf("flag111111111111111111\n");
       f->eax = (uint32_t)-1;
     } else {
-      printf("flag22222222222222222\n");
-      //printf("bytes size: %d\n", size);
-
       int result = file_read(read_file, buffer, size);
-      printf("bytes read: %d\n", result);
       f->eax = (uint32_t)result;
     }
   } else {
