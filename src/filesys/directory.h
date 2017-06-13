@@ -33,5 +33,7 @@ int32_t dir_size_entry (void);
 
 char *dir_split_name(char *);
 
+// void dir_print_name(struc dir *);
+
 
 #endif /* filesys/directory.h */

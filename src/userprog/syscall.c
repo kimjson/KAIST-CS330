@@ -438,13 +438,18 @@ static void handle_chdir (struct intr_frame *f) {
 }
 
 static void handle_mkdir (struct intr_frame *f) {
-  char *new_dir;
-  const char *dir = *(char **)(f->esp + 4);
-  char *dir_path, *parent;
+  char *new_dir_path;
+  struct dir *dir;
+  const char *full_dir_path = *(char **)(f->esp + 4);
+  if (strlen(full_dir_path) == 0) {
+    f->eax = (uint32_t) false;
+    return;
+  }
+  char *dir_path = (char *)malloc(128);
   struct inode *temp_inode;
-  strlcpy(dir_path, dir, strlen(dir)+1); // replace to max path size.
-  new_dir = dir_split_name(dir_path);
-  if (strcmp(new_dir, dir_path) != 0) {
+  strlcpy(dir_path, full_dir_path, strlen(full_dir_path)+1); // replace to max path size.
+  new_dir_path = dir_split_name(dir_path);
+  if (strcmp(new_dir_path, dir_path) != 0) {
     dir = dir_open_path(dir_path);
   } else if (!thread_current()->curr_dir){
     thread_current()->curr_dir = dir_open_root();
@@ -454,22 +459,25 @@ static void handle_mkdir (struct intr_frame *f) {
   }
   disk_sector_t inode_sector = 0;
   bool success = (
-    parent != NULL &&
+    dir_path != NULL &&
     free_map_allocate (1, &inode_sector) &&
     inode_create (inode_sector, 16 * dir_size_entry())
   );
   if (success) {
     inode_set_directory(inode_open(inode_sector), true);
+    success = success && dir_add (dir, new_dir_path, inode_sector);
+    struct dir *new_dir = dir_open(inode_open(inode_sector));
     f->eax = (uint32_t) success && (
-      dir_add (parent, new_dir, inode_sector) &&
-      dir_add(parent, ".", inode_sector) &&
-      dir_add(parent, "..", inode_get_inumber (dir_get_inode (parent)))
+      dir_add(new_dir, ".", inode_sector) &&
+      dir_add(new_dir, "..", inode_get_inumber (dir_get_inode (dir)))
     );
+    free(new_dir_path);
+    dir_close(new_dir);
   } else {
     f->eax = (uint32_t)false;
   }
-  dir_close(parent);
-  f->eax = (uint32_t)success;
+  free(dir_path);
+  dir_close(dir);
 }
 
 static void handle_readdir (struct intr_frame *f) {
@@ -540,6 +548,16 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       handle_mmap(f);
     } else if (syscall_number == SYS_MUNMAP) {
       handle_munmap(f);
+    } else if (syscall_number == SYS_MKDIR) {
+      handle_mkdir (f);
+    } else if (syscall_number == SYS_CHDIR) {
+      handle_chdir (f);
+    } else if (syscall_number == SYS_READDIR) {
+      handle_readdir (f);
+    } else if (syscall_number == SYS_ISDIR) {
+      handle_isdir(f);
+    } else if (syscall_number == SYS_INUMBER) {
+      handle_inumber(f);
     }
   }
 }

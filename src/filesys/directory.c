@@ -58,6 +58,10 @@ dir_open_path(char *dir_path) {
   bool go_more = true;
   copied_path = (char *)malloc(128);
   strlcpy (copied_path, dir_path, strlen(dir_path)+1);
+  if (strcmp(copied_path, "/") == 0) {
+    free(copied_path);
+    return dir_open_root();
+  }
   if (copied_path[0] == '/') {
     // absolute path
     copied_path++;
@@ -69,15 +73,17 @@ dir_open_path(char *dir_path) {
     temp_dir = dir_reopen(thread_current()->curr_dir);
   }
   for (token = strtok_r (copied_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
-    printf("token: %s\n", token);
+    if (strlen(token) == 0) {
+      break;
+    }
     if (!dir_lookup (temp_dir, token, &temp_inode)) {
-      free(copied_path);
+      // free(copied_path);
       return NULL;
     }
     free(temp_dir);
     temp_dir = dir_open(temp_inode);
   }
-  free(copied_path);
+  // free(copied_path);
   return temp_dir;
 }
 
@@ -86,13 +92,18 @@ dir_open_path(char *dir_path) {
 char *
 dir_split_name(char *dir_path) {
   char *pos;
+  char *result = (char *)malloc(15);
   for (pos=dir_path + strlen(dir_path)-1; pos >= dir_path; pos--) {
     if (*pos == '/') {
+      // *pos = '\0';
+
+      strlcpy(result, ++pos, 15);
       *pos = '\0';
-      return pos+1;
+      return result;
     }
   }
-  return dir_path;
+  strlcpy(result, dir_path, 15);
+  return result;
 }
 
 
@@ -310,3 +321,8 @@ off_t
 dir_size_entry(void) {
   return sizeof (struct dir_entry);
 }
+
+// void
+// dir_print_name (struct dir *dir) {
+//   printf("name of dir: %s\n", dir_get_inode (dir))
+// }
