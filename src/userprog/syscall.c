@@ -127,8 +127,10 @@ static void handle_write(struct intr_frame *f) {
   if (fd == 1) {
     putbuf(buffer, size);
   } else if (fd > 1) {
+    printf("write fd:%d\n",fd);
     struct file *found_file = find_file_by_fd(fd);
     lock_acquire(&lock);
+    printf("found file is directory: %d\n", inode_is_directory(file_get_inode (found_file)));
     if (found_file == NULL || found_file->deny_write || inode_is_directory(file_get_inode (found_file))) {
       f->eax = (uint32_t) -1;
     } else {
@@ -432,7 +434,7 @@ static void handle_chdir (struct intr_frame *f) {
     f->eax = (uint32_t)false;
   } else {
     dir_close(thread_current ()->curr_dir);
-    thread_current ()->curr_dir = dir_open_path(dir);
+    thread_current ()->curr_dir = changed;
     f->eax = (uint32_t)true;
   }
 }
@@ -457,25 +459,12 @@ static void handle_mkdir (struct intr_frame *f) {
   } else {
     dir = dir_reopen(thread_current()->curr_dir);
   }
+
   disk_sector_t inode_sector = 0;
-  bool success = (
-    dir_path != NULL &&
-    free_map_allocate (1, &inode_sector) &&
-    inode_create (inode_sector, 16 * dir_size_entry())
-  );
-  if (success) {
-    inode_set_directory(inode_open(inode_sector), true);
-    success = success && dir_add (dir, new_dir_path, inode_sector);
-    struct dir *new_dir = dir_open(inode_open(inode_sector));
-    f->eax = (uint32_t) success && (
-      dir_add(new_dir, ".", inode_sector) &&
-      dir_add(new_dir, "..", inode_get_inumber (dir_get_inode (dir)))
-    );
-    free(new_dir_path);
-    dir_close(new_dir);
-  } else {
-    f->eax = (uint32_t)false;
-  }
+  bool success = dir_path != NULL && free_map_allocate (1, &inode_sector);
+  success = success && dir_create(inode_sector, 16, dir, new_dir_path);
+  f->eax = (uint32_t) success;
+  free(new_dir_path);
   free(dir_path);
   dir_close(dir);
 }

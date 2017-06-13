@@ -25,9 +25,31 @@ struct dir_entry
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool
-dir_create (disk_sector_t sector, size_t entry_cnt)
+dir_create (disk_sector_t sector, size_t entry_cnt, struct dir *parent_dir, char *name)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  struct dir *new_dir;
+  bool success = inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  if (success) {
+    struct inode *new_inode = inode_open(sector);
+    inode_set_directory(new_inode, true);
+    new_dir = dir_open(new_inode);
+    if (sector == ROOT_DIR_SECTOR) {
+      success = success && (
+        dir_add(new_dir, ".", sector) &&
+        dir_add(new_dir, "..", sector)
+      );
+    } else {
+      success = success && dir_add (parent_dir, name, sector);
+      success = success && (
+        dir_add(new_dir, ".", sector) &&
+        dir_add(new_dir, "..", inode_get_inumber (dir_get_inode (parent_dir)))
+      );
+    }
+    dir_close(new_dir);
+  } else {
+    success = false;
+  }
+  return success;
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -73,6 +95,7 @@ dir_open_path(char *dir_path) {
     temp_dir = dir_reopen(thread_current()->curr_dir);
   }
   for (token = strtok_r (copied_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
+    printf("token: %s\n", token);
     if (strlen(token) == 0) {
       break;
     }
@@ -320,6 +343,35 @@ dir_empty (struct dir *dir)
 off_t
 dir_size_entry(void) {
   return sizeof (struct dir_entry);
+}
+
+
+void
+dir_print_name (const struct dir *dir)
+{
+  struct dir_entry e;
+  size_t ofs;
+  struct inode *inode;
+
+  ASSERT (dir != NULL);
+
+  // printf("lookup name:%s\n",name);
+  //hex_dump(0,name,20,true);
+  dir_lookup (dir, "..", &inode);
+  disk_sector_t inode_sector = inode_get_inumber (dir->inode);
+
+  for (ofs = 0; inode_read_at (inode, &e, sizeof e, ofs) == sizeof e;
+       ofs += sizeof e)
+    {
+      // printf("searching name:%s\n",e.name);
+      if (e.in_use && inode_sector == e.inode_sector)
+      {
+        printf("name for directory 0x%08x is %s\n", dir, e.name);
+        return;
+      }
+    }
+  printf("no directory found for 0x%08x\n", dir);
+  return;
 }
 
 // void

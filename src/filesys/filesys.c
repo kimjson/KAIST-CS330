@@ -113,11 +113,17 @@ filesys_open (const char *name)
   } else {
     dir = dir_reopen(thread_current()->curr_dir);
   }
+  printf("name of current working directory of thread: \n");
+  dir_print_name(thread_current()->curr_dir);
+  printf("name of new working directory: \n");
+  dir_print_name(dir);
   // printf("copied_name: %s\n", copied_name);
   // printf("file_name: %s\n", file_name);
+  printf("dir: 0x%08x\n", dir);
   if (dir != NULL) {
     // dir_lookup (dir_open_root(), file_name, &inode);
     dir_lookup (dir, file_name, &inode);
+    printf("inode: 0x%08x\n", inode);
     dir_close(dir);
     open_file = file_open(inode);
     // printf("open_file: 0x%08x\n", open_file);
@@ -179,7 +185,7 @@ do_format (void)
 
   printf ("Formatting file system...");
   free_map_create ();
-  if (!dir_create (ROOT_DIR_SECTOR, 16))
+  if (!dir_create (ROOT_DIR_SECTOR, 16, NULL, "/"))
     PANIC ("root directory creation failed");
   free_map_close ();
   printf ("done.\n");

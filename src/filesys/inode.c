@@ -41,6 +41,7 @@ struct inode
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;             /* Inode content. */
     //cache_entry *cache;                 /* cache entry pointer */
+    bool is_directory;
   };
 
 /* Returns the disk sector that contains byte offset POS within
@@ -203,8 +204,6 @@ inode_open (disk_sector_t sector)
 struct inode *
 inode_reopen (struct inode *inode)
 {
-    // printf("reopen\n");
-
   if (inode != NULL)
     inode->open_cnt++;
   return inode;
@@ -506,10 +505,22 @@ inode_length (const struct inode *inode)
 
 bool
 inode_is_directory(struct inode *inode) {
-  return inode->data.is_directory;
+  // printf("0x%08x is directory: %d\n", inode, inode->data.is_directory);
+  return inode->is_directory;
 }
 
 void
 inode_set_directory(struct inode *inode, bool b) {
-  inode->data.is_directory = b;
+  inode->is_directory = b;
 }
+
+// bool
+// inode_is_directory(struct inode *inode) {
+//   printf("0x%08x is directory: %d\n", inode, inode->data.is_directory);
+//   return inode->data.is_directory;
+// }
+//
+// void
+// inode_set_directory(struct inode *inode, bool b) {
+//   inode->data.is_directory = b;
+// }
