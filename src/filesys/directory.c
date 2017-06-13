@@ -28,7 +28,6 @@ bool
 dir_create (disk_sector_t sector, size_t entry_cnt, struct dir *parent_dir, char *name)
 {
   struct dir *new_dir;
-  printf("creating name:%s\n",name);
   bool success = inode_create (sector, entry_cnt * sizeof (struct dir_entry),true);
   if (success) {
     struct inode *new_inode = inode_open(sector);
