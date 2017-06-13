@@ -286,7 +286,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       if (chunk_size <= 0)
         break;
 
-      printf("read at inode_sector:%d\n",sector_idx);
+      // printf("read at inode_sector:%d\n",sector_idx);
 
 
       if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE)

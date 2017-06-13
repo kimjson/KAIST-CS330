@@ -56,21 +56,28 @@ dir_open_path(char *dir_path) {
   struct dir *temp_dir;
   struct inode *temp_inode;
   bool go_more = true;
+  copied_path = (char *)malloc(128);
   strlcpy (copied_path, dir_path, strlen(dir_path)+1);
   if (copied_path[0] == '/') {
     // absolute path
     copied_path++;
     temp_dir = dir_open_root();
+  } else if (!thread_current()->curr_dir){
+    thread_current()->curr_dir = dir_open_root();
+    temp_dir = dir_reopen(thread_current()->curr_dir);
   } else {
-    temp_dir = thread_current()->curr_dir;
+    temp_dir = dir_reopen(thread_current()->curr_dir);
   }
   for (token = strtok_r (copied_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
+    printf("token: %s\n", token);
     if (!dir_lookup (temp_dir, token, &temp_inode)) {
+      free(copied_path);
       return NULL;
     }
     free(temp_dir);
     temp_dir = dir_open(temp_inode);
   }
+  free(copied_path);
   return temp_dir;
 }
 
@@ -85,8 +92,9 @@ dir_split_name(char *dir_path) {
       return pos+1;
     }
   }
-  return NULL;
+  return dir_path;
 }
+
 
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
@@ -169,8 +177,10 @@ dir_lookup (const struct dir *dir, const char *name,
 
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
-  if (lookup (dir, name, &e, NULL))
+  if (lookup (dir, name, &e, NULL)) {
+    // printf("inode_sector: %d\n", e.inode_sector);
     *inode = inode_open (e.inode_sector);
+  }
   else
     *inode = NULL;
 

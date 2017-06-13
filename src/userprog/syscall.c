@@ -444,7 +444,14 @@ static void handle_mkdir (struct intr_frame *f) {
   struct inode *temp_inode;
   strlcpy(dir_path, dir, strlen(dir)+1); // replace to max path size.
   new_dir = dir_split_name(dir_path);
-  parent = dir_open_path(dir_path);
+  if (strcmp(new_dir, dir_path) != 0) {
+    dir = dir_open_path(dir_path);
+  } else if (!thread_current()->curr_dir){
+    thread_current()->curr_dir = dir_open_root();
+    dir = dir_reopen(thread_current()->curr_dir);
+  } else {
+    dir = dir_reopen(thread_current()->curr_dir);
+  }
   disk_sector_t inode_sector = 0;
   bool success = (
     parent != NULL &&

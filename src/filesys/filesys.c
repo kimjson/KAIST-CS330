@@ -60,11 +60,20 @@ filesys_create (const char *name, off_t initial_size)
   // printf("filesys create\n");
   disk_sector_t inode_sector = 0;
   struct dir *dir;
-  char *copied_name;
+  char *copied_name = (char *)malloc(128);
   char *file_name;
   strlcpy (copied_name, name, strlen(name)+1);
   file_name = dir_split_name(copied_name);
-  dir = dir_open_path(copied_name);
+  if (strcmp(file_name, copied_name) != 0) {
+    dir = dir_open_path(copied_name);
+  } else if (!thread_current()->curr_dir){
+    thread_current()->curr_dir = dir_open_root();
+    dir = dir_reopen(thread_current()->curr_dir);
+  } else {
+    dir = dir_reopen(thread_current()->curr_dir);
+  }
+  // printf("copied_name: %s\n", copied_name);
+  // printf("file_name: %s\n", file_name);
   // struct dir *dir = dir_open_root ();
   bool success = (
     dir != NULL &&
@@ -74,8 +83,8 @@ filesys_create (const char *name, off_t initial_size)
   );
   if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
-  // dir_close (dir);
-
+  dir_close (dir);
+  free(copied_name);
   return success;
 }
 
@@ -87,21 +96,35 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
-  char *copied_name;
+  char *copied_name = malloc(strlen(name)+1);
   const char *file_name;
   struct dir *dir;
   struct file *open_file;
   struct inode *inode = NULL;
   strlcpy (copied_name, name, strlen(name)+1);
   file_name = dir_split_name(copied_name);
-  dir = dir_open_path(copied_name);
-  if (dir != NULL) {
-    dir_lookup (dir, file_name, &inode);
+  if (strcmp(file_name, copied_name) != 0) {
+    dir = dir_open_path(copied_name);
+  } else if (!thread_current()->curr_dir){
+    thread_current()->curr_dir = dir_open_root();
+    dir = dir_reopen(thread_current()->curr_dir);
+  } else {
+    dir = dir_reopen(thread_current()->curr_dir);
   }
-  dir_close(dir);
-  open_file = file_open(inode);
-  // inode_set_directory(file_get_inode(open_file), true);
-  return open_file;
+  // printf("copied_name: %s\n", copied_name);
+  // printf("file_name: %s\n", file_name);
+  if (dir != NULL) {
+    // dir_lookup (dir_open_root(), file_name, &inode);
+    dir_lookup (dir, file_name, &inode);
+    dir_close(dir);
+    open_file = file_open(inode);
+    // printf("open_file: 0x%08x\n", open_file);
+    free(copied_name);
+    return open_file;
+  } else {
+    free(copied_name);
+    return NULL;
+  }
 }
 
 /* Deletes the file named NAME.
@@ -111,7 +134,7 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name)
 {
-  char *copied_name;
+  char *copied_name = (char *)malloc(128);
   const char *file_name;
   struct dir *dir;
   struct dir *dir_file;
@@ -120,7 +143,14 @@ filesys_remove (const char *name)
 
   strlcpy (copied_name, name, strlen(name)+1);
   file_name = dir_split_name(copied_name);
-  dir = dir_open_path(copied_name);
+  if (strcmp(file_name, copied_name) != 0) {
+    dir = dir_open_path(copied_name);
+  } else if (!thread_current()->curr_dir){
+    thread_current()->curr_dir = dir_open_root();
+    dir = dir_reopen(thread_current()->curr_dir);
+  } else {
+    dir = dir_reopen(thread_current()->curr_dir);
+  }
   // if file is directory and not empty, fails.
   success = dir_lookup (dir, file_name, &inode);
   if (!inode_is_directory(inode)) {
