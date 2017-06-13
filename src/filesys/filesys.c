@@ -60,7 +60,7 @@ filesys_create (const char *name, off_t initial_size)
   // printf("filesys create\n");
   disk_sector_t inode_sector = 0;
   struct dir *dir;
-  char *copied_name = (char *)malloc(128);
+  char *copied_name = (char *)malloc(PATH_MAX);
   char *file_name;
   strlcpy (copied_name, name, strlen(name)+1);
   file_name = dir_split_name(copied_name);
@@ -145,7 +145,7 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name)
 {
-  char *copied_name = (char *)malloc(128);
+  char *copied_name = (char *)malloc(PATH_MAX);
   const char *file_name;
   struct dir *dir;
   struct dir *dir_file;

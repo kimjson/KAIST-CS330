@@ -28,6 +28,7 @@ bool
 dir_create (disk_sector_t sector, size_t entry_cnt, struct dir *parent_dir, char *name)
 {
   struct dir *new_dir;
+  printf("creating name:%s\n",name);
   bool success = inode_create (sector, entry_cnt * sizeof (struct dir_entry),true);
   if (success) {
     struct inode *new_inode = inode_open(sector);
@@ -57,6 +58,7 @@ dir_create (disk_sector_t sector, size_t entry_cnt, struct dir *parent_dir, char
 struct dir *
 dir_open (struct inode *inode)
 {
+
   struct dir *dir = calloc (1, sizeof *dir);
   if (inode != NULL && dir != NULL)
     {
@@ -78,7 +80,7 @@ dir_open_path(char *dir_path) {
   struct dir *temp_dir;
   struct inode *temp_inode;
   bool go_more = true;
-  copied_path = (char *)malloc(128);
+  copied_path = (char *)malloc(PATH_MAX);
   strlcpy (copied_path, dir_path, strlen(dir_path)+1);
   if (strcmp(copied_path, "/") == 0) {
     free(copied_path);

@@ -199,8 +199,12 @@ static void handle_open(struct intr_frame *f) {
 static void handle_remove(struct intr_frame *f) {
   char *file = *(char **)(f->esp + 4);
   lock_acquire(&lock);
-  if (file_get_inode (filesys_open(file)) == dir_get_inode (thread_current()->curr_dir)) {
-    // cannot remove current directory
+  struct inode *file_inode = file_get_inode (filesys_open(file));
+  if (!inode_is_directory(file_inode)) {
+    f->eax = (uint32_t) filesys_remove(file);
+    lock_release(&lock);
+  } else if (file_inode == dir_get_inode (thread_current()->curr_dir) || inode_open_cnt(file_inode) > 0) {
+    // cannot remove current or open directory.
     f->eax = (uint32_t) false;
     lock_release(&lock);
   } else {
@@ -453,7 +457,7 @@ static void handle_mkdir (struct intr_frame *f) {
     f->eax = (uint32_t) false;
     return;
   }
-  char *dir_path = (char *)malloc(128);
+  char *dir_path = (char *)malloc(PATH_MAX);
   struct inode *temp_inode;
   strlcpy(dir_path, full_dir_path, strlen(full_dir_path)+1); // replace to max path size.
   new_dir_path = dir_split_name(dir_path);

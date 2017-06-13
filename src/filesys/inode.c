@@ -518,6 +518,11 @@ inode_set_directory(struct inode *inode, bool b) {
   inode->data.is_directory = b;
 }
 
+int
+inode_open_cnt(struct inode *inode) {
+  return inode->open_cnt;
+}
+
 // bool
 // inode_is_directory(struct inode *inode) {
 //   printf("0x%08x is directory: %d\n", inode, inode->data.is_directory);
