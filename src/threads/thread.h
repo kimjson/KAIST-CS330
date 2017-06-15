@@ -23,6 +23,7 @@
 #include "vaddr.h"
 #include "malloc.h"
 #include "vm/page.h"
+#include "filesys/directory.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -128,6 +129,8 @@ struct thread
 
     struct thread_info *info;
     struct list mapping_list;
+
+    struct dir *curr_dir;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

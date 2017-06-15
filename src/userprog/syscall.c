@@ -30,8 +30,18 @@ static void handle_write(struct intr_frame *);
 static void handle_seek(struct intr_frame *);
 static void handle_tell(struct intr_frame *);
 static void handle_close(struct intr_frame *);
+
+// syscall for project 3-2
 static void handle_mmap(struct intr_frame *);
 static void handle_munmap(struct intr_frame *);
+
+// syscall for project 4
+static void handle_chdir(struct intr_frame *);
+static void handle_mkdir(struct intr_frame *);
+static void handle_readdir(struct intr_frame *);
+static void handle_isdir(struct intr_frame *);
+static void handle_inumber(struct intr_frame *);
+
 
 static struct file *find_file_by_fd(int);
 struct lock lock;
@@ -117,11 +127,15 @@ static void handle_write(struct intr_frame *f) {
   if (fd == 1) {
     putbuf(buffer, size);
   } else if (fd > 1) {
+    // printf("write fd:%d\n",fd);
     struct file *found_file = find_file_by_fd(fd);
     lock_acquire(&lock);
-    if (found_file == NULL || found_file->deny_write) {
+    // printf("found file is directory: %d\n", inode_is_directory(file_get_inode (found_file)));
+    if (found_file == NULL || found_file->deny_write || inode_is_directory(file_get_inode (found_file))) {
+      //printf("flag111111\n");
       f->eax = (uint32_t) -1;
     } else {
+      //printf("flag22222\n");
       int result = file_write(found_file, buffer, size);
       f->eax = (uint32_t)result;
     }
@@ -185,10 +199,22 @@ static void handle_open(struct intr_frame *f) {
 }
 
 static void handle_remove(struct intr_frame *f) {
-  char *file_name = *(char **)(f->esp + 4);
+  char *file = *(char **)(f->esp + 4);
   lock_acquire(&lock);
-  filesys_remove(file_name);
-  lock_release(&lock);
+  struct inode *file_inode = file_get_inode (filesys_open(file));
+  // printf("file inode is directory: %d\n", inode_is_directory(file_inode));
+  if (!inode_is_directory(file_inode)) {
+    f->eax = (uint32_t) filesys_remove(file);
+    lock_release(&lock);
+  } else if (file_inode == dir_get_inode (thread_current()->curr_dir) || inode_open_cnt(file_inode) > 1) {
+    // cannot remove current or open directory.
+    // TODO: tell whether it's opened by other method than checking open_cnt.
+    f->eax = (uint32_t) false;
+    lock_release(&lock);
+  } else {
+    f->eax = (uint32_t) filesys_remove(file);
+    lock_release(&lock);
+  }
 }
 
 static void handle_close(struct intr_frame *f) {
@@ -201,7 +227,11 @@ static void handle_close(struct intr_frame *f) {
     struct file *f = list_entry (e2, struct file, elem_for_thread);
     if (f->fd == fd) {
       list_remove(&f->elem_for_thread);
-      file_close (f);
+      if (inode_is_directory(file_get_inode (f))) {
+        dir_close(f);
+      } else {
+        file_close (f);
+      }
       break;
     }
 
@@ -219,7 +249,7 @@ static void handle_read(struct intr_frame *f) {
   int fd = *(int *)(f->esp + 4);
   char *buffer = *(char **)(f->esp + 8);
   unsigned size = *(unsigned *)(f->esp + 12);
- // printf("handle read\n");
+  // printf("handle read\n");
   if(is_invalid(f->esp+4)||is_invalid(f->esp+8)||is_invalid(f->esp+12)){
     handle_invalid(f);
   }
@@ -235,12 +265,10 @@ static void handle_read(struct intr_frame *f) {
     f->eax = (uint32_t)i;
   } else if (fd > 1) {
     struct file *read_file = find_file_by_fd(fd);
-    if (read_file == NULL) {
+    if (read_file == NULL || inode_is_directory(file_get_inode (read_file))) {
       f->eax = (uint32_t)-1;
     } else {
-      //printf("flag22222\n");
       int result = file_read(read_file, buffer, size);
-      //printf("result:%d\n",result);
       f->eax = (uint32_t)result;
     }
   } else {
@@ -275,11 +303,7 @@ static void handle_exec(struct intr_frame *f) {
     handle_invalid(f);
   }
   pid_t result = process_execute(cmd_line);
-  // struct thread *child = find_child_by_tid((tid_t) result);
-  // struct thread *child = list_entry(list_back(&thread_current()->child_list), struct thread, child_list_elem);
-  // printf("flag24680\n");
   struct thread_info *child_info = find_child_info_by_tid((tid_t) result);
-  // struct thread_info *child_info = list_entry(list_back(&thread_current()->child_info_list), struct thread_info, elem);
   if (child_info != NULL) {
     sema_down(&child_info->exec_sema);
     if (!child_info->load_success) {
@@ -416,6 +440,74 @@ static void handle_munmap(struct intr_frame *f) {
     }
 }
 
+static void handle_chdir (struct intr_frame *f) {
+  struct dir *changed;
+  const char *dir = *(char **)(f->esp + 4);
+  changed = dir_open_path(dir);
+  if (changed == NULL) {
+    f->eax = (uint32_t)false;
+  } else {
+    dir_close(thread_current ()->curr_dir);
+    thread_current ()->curr_dir = changed;
+    f->eax = (uint32_t)true;
+  }
+}
+
+static void handle_mkdir (struct intr_frame *f) {
+  char *new_dir_path;
+  struct dir *dir;
+  const char *full_dir_path = *(char **)(f->esp + 4);
+  if (strlen(full_dir_path) == 0) {
+    f->eax = (uint32_t) false;
+    return;
+  }
+  char *dir_path = (char *)malloc(PATH_MAX);
+  struct inode *temp_inode;
+  strlcpy(dir_path, full_dir_path, strlen(full_dir_path)+1); // replace to max path size.
+  new_dir_path = dir_split_name(dir_path);
+  if (strcmp(new_dir_path, dir_path) != 0) {
+    dir = dir_open_path(dir_path);
+  } else if (!thread_current()->curr_dir){
+    thread_current()->curr_dir = dir_open_root();
+    dir = dir_reopen(thread_current()->curr_dir);
+  } else {
+    dir = dir_reopen(thread_current()->curr_dir);
+  }
+
+  disk_sector_t inode_sector = 0;
+  bool success = dir_path != NULL && free_map_allocate (1, &inode_sector);
+  success = success && dir_create(inode_sector, 16, dir, new_dir_path);
+  f->eax = (uint32_t) success;
+  free(new_dir_path);
+  free(dir_path);
+  dir_close(dir);
+}
+
+static void handle_readdir (struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  char *name = *(char **)(f->esp + 8);
+  struct file *file = find_file_by_fd(fd);
+  struct dir *dir;
+  if (!inode_is_directory(file_get_inode (file))) {
+    f->eax = (uint32_t) false;
+    return;
+  }
+  dir = dir_open(file->inode);
+  f->eax = (uint32_t) dir_readdir(dir, name);
+  dir_close(dir);
+}
+
+static void handle_isdir (struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  f->eax = (uint32_t) inode_is_directory(file_get_inode(find_file_by_fd(fd)));
+}
+
+static void handle_inumber (struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  f->eax = (uint32_t) inode_get_inumber(file_get_inode(find_file_by_fd(fd)));
+}
+
+
 static void
 syscall_handler (struct intr_frame *f)// UNUSED)
 {
@@ -459,6 +551,16 @@ syscall_handler (struct intr_frame *f)// UNUSED)
       handle_mmap(f);
     } else if (syscall_number == SYS_MUNMAP) {
       handle_munmap(f);
+    } else if (syscall_number == SYS_MKDIR) {
+      handle_mkdir (f);
+    } else if (syscall_number == SYS_CHDIR) {
+      handle_chdir (f);
+    } else if (syscall_number == SYS_READDIR) {
+      handle_readdir (f);
+    } else if (syscall_number == SYS_ISDIR) {
+      handle_isdir(f);
+    } else if (syscall_number == SYS_INUMBER) {
+      handle_inumber(f);
     }
   }
 }

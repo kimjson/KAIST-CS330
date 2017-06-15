@@ -7,7 +7,7 @@ struct list cache;
 
 
 void
-cache_init(void){
+cache_init(){
 	//printf("cache-init\n");
 	list_init(&cache);
 	sema_init(&cache_sema, 1);
@@ -22,7 +22,6 @@ cache_in(disk_sector_t first_sec_no){
 	/* check cache_length*/
 	struct cache_entry *ce;
 	//printf("cahce in sector_no:%d\n",first_sec_no);
-
 
 	if(list_size(&cache)>=64){
 		struct cache_entry* victim_Cache = list_entry(list_pop_front(&cache),struct cache_entry, list_elem);

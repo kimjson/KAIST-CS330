@@ -5,6 +5,7 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/thread.h"
 
 /* A directory. */
 struct dir
@@ -24,9 +25,31 @@ struct dir_entry
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool
-dir_create (disk_sector_t sector, size_t entry_cnt)
+dir_create (disk_sector_t sector, size_t entry_cnt, struct dir *parent_dir, char *name)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  struct dir *new_dir;
+  bool success = inode_create (sector, entry_cnt * sizeof (struct dir_entry),true);
+  if (success) {
+    struct inode *new_inode = inode_open(sector);
+    // inode_set_directory(new_inode, true);
+    new_dir = dir_open(new_inode);
+    if (sector == ROOT_DIR_SECTOR) {
+      success = success && (
+        dir_add(new_dir, ".", sector) &&
+        dir_add(new_dir, "..", sector)
+      );
+    } else {
+      success = success && dir_add (parent_dir, name, sector);
+      success = success && (
+        dir_add(new_dir, ".", sector) &&
+        dir_add(new_dir, "..", inode_get_inumber (dir_get_inode (parent_dir)))
+      );
+    }
+    dir_close(new_dir);
+  } else {
+    success = false;
+  }
+  return success;
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -34,6 +57,7 @@ dir_create (disk_sector_t sector, size_t entry_cnt)
 struct dir *
 dir_open (struct inode *inode)
 {
+
   struct dir *dir = calloc (1, sizeof *dir);
   if (inode != NULL && dir != NULL)
     {
@@ -48,6 +72,64 @@ dir_open (struct inode *inode)
       return NULL;
     }
 }
+
+struct dir *
+dir_open_path(char *dir_path) {
+  char *copied_path, *token, *save_ptr;
+  struct dir *temp_dir;
+  struct inode *temp_inode;
+  bool go_more = true;
+  copied_path = (char *)malloc(PATH_MAX);
+  strlcpy (copied_path, dir_path, strlen(dir_path)+1);
+  if (strcmp(copied_path, "/") == 0) {
+    free(copied_path);
+    return dir_open_root();
+  }
+  if (copied_path[0] == '/') {
+    // absolute path
+    copied_path++;
+    temp_dir = dir_open_root();
+  } else if (!thread_current()->curr_dir){
+    thread_current()->curr_dir = dir_open_root();
+    temp_dir = dir_reopen(thread_current()->curr_dir);
+  } else {
+    temp_dir = dir_reopen(thread_current()->curr_dir);
+  }
+  for (token = strtok_r (copied_path, "/", &save_ptr); token != NULL; token = strtok_r (NULL, "/", &save_ptr)) {
+    // printf("token: %s\n", token);
+    if (strlen(token) == 0) {
+      break;
+    }
+    if (!dir_lookup (temp_dir, token, &temp_inode)) {
+      // free(copied_path);
+      return NULL;
+    }
+    free(temp_dir);
+    temp_dir = dir_open(temp_inode);
+  }
+  // free(copied_path);
+  return temp_dir;
+}
+
+// split path to produce parent path and name.
+// it changes input char pointer's content.
+char *
+dir_split_name(char *dir_path) {
+  char *pos;
+  char *result = (char *)malloc(15);
+  for (pos=dir_path + strlen(dir_path)-1; pos >= dir_path; pos--) {
+    if (*pos == '/') {
+      // *pos = '\0';
+
+      strlcpy(result, ++pos, 15);
+      *pos = '\0';
+      return result;
+    }
+  }
+  strlcpy(result, dir_path, 15);
+  return result;
+}
+
 
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
@@ -131,8 +213,10 @@ dir_lookup (const struct dir *dir, const char *name,
 
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
-  if (lookup (dir, name, &e, NULL))
+  if (lookup (dir, name, &e, NULL)) {
+    // printf("inode_sector: %d\n", e.inode_sector);
     *inode = inode_open (e.inode_sector);
+  }
   else
     *inode = NULL;
 
@@ -148,7 +232,11 @@ dir_lookup (const struct dir *dir, const char *name,
    Fails if NAME is invalid (i.e. too long) or a disk or memory
    error occurs. */
 bool
-dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector)
+dir_add (
+  struct dir *dir,
+  const char *name,
+  disk_sector_t inode_sector
+)
 {
   struct dir_entry e;
   off_t ofs;
@@ -235,15 +323,67 @@ bool
 dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
-
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e)
     {
       dir->pos += sizeof e;
-      if (e.in_use)
+      if (e.in_use && strcmp (e.name, ".") != 0 && strcmp(e.name, "..") != 0)
         {
+          // printf("e:%s\n",e.name);
           strlcpy (name, e.name, NAME_MAX + 1);
           return true;
         }
     }
   return false;
 }
+
+bool
+dir_empty (struct dir *dir)
+{
+  char name[NAME_MAX+1];
+  bool is_empty;
+  off_t pos = dir->pos;
+  dir->pos = 0;
+  is_empty = !dir_readdir(dir, name);
+  // printf("is_empty:%d\n",is_empty);
+  dir->pos = pos;
+  return is_empty;
+}
+
+off_t
+dir_size_entry(void) {
+  return sizeof (struct dir_entry);
+}
+
+
+void
+dir_print_name (const struct dir *dir)
+{
+  struct dir_entry e;
+  size_t ofs;
+  struct inode *inode;
+
+  ASSERT (dir != NULL);
+
+  // printf("lookup name:%s\n",name);
+  //hex_dump(0,name,20,true);
+  dir_lookup (dir, "..", &inode);
+  disk_sector_t inode_sector = inode_get_inumber (dir->inode);
+
+  for (ofs = 0; inode_read_at (inode, &e, sizeof e, ofs) == sizeof e;
+       ofs += sizeof e)
+    {
+      // printf("searching name:%s\n",e.name);
+      if (e.in_use && inode_sector == e.inode_sector)
+      {
+        printf("name for directory 0x%08x is %s\n", dir, e.name);
+        return;
+      }
+    }
+  printf("no directory found for 0x%08x\n", dir);
+  return;
+}
+
+// void
+// dir_print_name (struct dir *dir) {
+//   printf("name of dir: %s\n", dir_get_inode (dir))
+// }

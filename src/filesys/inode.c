@@ -23,7 +23,8 @@ struct inode_disk
     disk_sector_t indirect_block;
     disk_sector_t double_indirect_block;
     unsigned magic;                     /* Magic number. */
-    uint32_t unused[112];               /* Not used. */
+    bool is_directory;
+    uint32_t unused[111];               /* Not used. */
   };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -44,6 +45,7 @@ struct inode
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     //off_t length;
     //struct inode_disk data;             /* Inode content. */
+    bool is_directory;
   };
 
 /* Returns the disk sector that contains byte offset POS within
@@ -377,7 +379,7 @@ inode_extend(struct inode * inode, off_t offset, off_t size)
 
 
 bool
-inode_create (disk_sector_t sector, off_t length)
+inode_create (disk_sector_t sector, off_t length,bool is_dir)
 {
   // printf("print create\n");
 
@@ -402,7 +404,7 @@ inode_create (disk_sector_t sector, off_t length)
 
   disk_inode->magic = INODE_MAGIC;
   disk_inode->length = length;
-
+  disk_inode->is_directory = is_dir;
 
   if(sectors>0){
     int i;
@@ -472,6 +474,7 @@ inode_create (disk_sector_t sector, off_t length)
 
     for(i=0;i<count;i++)
     {
+
         if(!free_map_allocate(1,&sec_no)){
           //printf("fllag11111111\n");
           return false;
@@ -664,7 +667,6 @@ inode_open (disk_sector_t sector)
     //  printf("ls inode:%d\n",inode->sector);
       if (inode->sector == sector)
         {
-          // printf("find some open inode \n");
           inode_reopen (inode);
           return inode;
         }
@@ -708,8 +710,6 @@ inode_open (disk_sector_t sector)
 struct inode *
 inode_reopen (struct inode *inode)
 {
-    // printf("reopen\n");
-
   if (inode != NULL)
     inode->open_cnt++;
   return inode;
@@ -870,9 +870,6 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       if (chunk_size <= 0)
         break;
 
-        // printf("read at inode_sector:%d\n",sector_idx);
-
-
       if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE)
         {
           // if cache hit, bring it.
@@ -984,7 +981,6 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
             target_ce->is_dirty = true;
           } else {
             /* Read full sector directly into caller's buffer. */
-            //printf("flag11111\n");
             target_ce = cache_in(sector_idx);
             //cache_in(sector_idx+1);
             memcpy (target_ce->block, buffer+bytes_written, DISK_SECTOR_SIZE);
@@ -1109,3 +1105,30 @@ inode_length (const struct inode *inode)
   struct inode_disk * id= (struct inode_disk*)target_ce->block;
   return id->length;
 }
+
+bool
+inode_is_directory(struct inode *inode) {
+  // printf("0x%08x is directory: %d\n", inode, inode->data.is_directory);
+  return inode->data.is_directory;
+}
+
+void
+inode_set_directory(struct inode *inode, bool b) {
+  inode->data.is_directory = b;
+}
+
+int
+inode_open_cnt(struct inode *inode) {
+  return inode->open_cnt;
+}
+
+// bool
+// inode_is_directory(struct inode *inode) {
+//   printf("0x%08x is directory: %d\n", inode, inode->data.is_directory);
+//   return inode->data.is_directory;
+// }
+//
+// void
+// inode_set_directory(struct inode *inode, bool b) {
+//   inode->data.is_directory = b;
+// }
