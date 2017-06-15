@@ -13,11 +13,11 @@
 
 /* List files in the root directory. */
 void
-fsutil_ls (char **argv UNUSED) 
+fsutil_ls (char **argv UNUSED)
 {
   struct dir *dir;
   char name[NAME_MAX + 1];
-  
+
   printf ("Files in the root directory:\n");
   dir = dir_open_root ();
   if (dir == NULL)
@@ -33,7 +33,7 @@ void
 fsutil_cat (char **argv)
 {
   const char *file_name = argv[1];
-  
+
   struct file *file;
   char *buffer;
 
@@ -42,14 +42,14 @@ fsutil_cat (char **argv)
   if (file == NULL)
     PANIC ("%s: open failed", file_name);
   buffer = palloc_get_page (PAL_ASSERT);
-  for (;;) 
+  for (;;)
     {
       off_t pos = file_tell (file);
       off_t n = file_read (file, buffer, PGSIZE);
       if (n == 0)
         break;
 
-      hex_dump (pos, buffer, n, true); 
+      hex_dump (pos, buffer, n, true);
     }
   palloc_free_page (buffer);
   file_close (file);
@@ -57,10 +57,10 @@ fsutil_cat (char **argv)
 
 /* Deletes file ARGV[1]. */
 void
-fsutil_rm (char **argv) 
+fsutil_rm (char **argv)
 {
   const char *file_name = argv[1];
-  
+
   printf ("Deleting '%s'...\n", file_name);
   if (!filesys_remove (file_name))
     PANIC ("%s: delete failed\n", file_name);
@@ -79,7 +79,7 @@ fsutil_rm (char **argv)
    disk.  This disk position is independent of that used for
    fsutil_get(), so all `put's should precede all `get's. */
 void
-fsutil_put (char **argv) 
+fsutil_put (char **argv)
 {
   static disk_sector_t sector = 0;
 
@@ -111,21 +111,21 @@ fsutil_put (char **argv)
   size = ((int32_t *) buffer)[1];
   if (size < 0)
     PANIC ("%s: invalid file size %d", file_name, size);
-  
-  printf("fsuitl_put filename:%s\n",file_name);
+
+  //printf("fsuitl_put filename:%s\n",file_name);
 
   /* Create destination file. */
   if (!filesys_create (file_name, size))
     PANIC ("%s: create failed", file_name);
 
 //this time file name changed
-  printf("filename:%s\n",file_name);
+  //printf("filename:%s\n",file_name);
 
   dst = filesys_open (file_name);
   if (dst == NULL)
     PANIC ("%s: open failed", file_name);
 
-  
+
  // printf("fsutill flag1\n");
 
   /* Do copy. */
@@ -185,15 +185,15 @@ fsutil_get (char **argv)
   dst = disk_get (1, 0);
   if (dst == NULL)
     PANIC ("couldn't open target disk (hdc or hd1:0)");
-  
+
   /* Write size to sector 0. */
   memset (buffer, 0, DISK_SECTOR_SIZE);
   memcpy (buffer, "GET", 4);
   ((int32_t *) buffer)[1] = size;
   disk_write (dst, sector++, buffer);
-  
+
   /* Do copy. */
-  while (size > 0) 
+  while (size > 0)
     {
       int chunk_size = size > DISK_SECTOR_SIZE ? DISK_SECTOR_SIZE : size;
       if (sector >= disk_size (dst))

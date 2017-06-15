@@ -137,6 +137,7 @@ static void handle_halt(struct intr_frame *f) {
 
 static void handle_create(struct intr_frame *f) {
   if (is_invalid(f->esp +4) || is_invalid(f->esp + 8)) {
+  //  printf("bad argument pointer\n");
     handle_invalid(f);
   }
 
@@ -146,6 +147,7 @@ static void handle_create(struct intr_frame *f) {
 
   lock_acquire(&lock);
   if (is_invalid(file) || strlen(file) == 0) {
+    //printf("file pointer invalid\n");
     handle_invalid(f);
   } else if (strlen(file) > 14) {
     f->eax = (uint32_t)result;

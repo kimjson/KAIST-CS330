@@ -17,7 +17,7 @@ static void do_format (void);
 /* Initializes the file system module.
    If FORMAT is true, reformats the file system. */
 void
-filesys_init (bool format) 
+filesys_init (bool format)
 {
   //printf("filesys init\n");
   filesys_disk = disk_get (0, 1);
@@ -29,7 +29,7 @@ filesys_init (bool format)
   inode_init();
   free_map_init ();
 
-  if (format) 
+  if (format)
     do_format ();
 
   free_map_open ();
@@ -38,9 +38,9 @@ filesys_init (bool format)
 /* Shuts down the file system module, writing any unwritten data
    to disk. */
 void
-filesys_done (void) 
+filesys_done (void)
 {
-  
+
   cache_close();
   free_map_close ();
 
@@ -51,7 +51,7 @@ filesys_done (void)
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
 bool
-filesys_create (const char *name, off_t initial_size) 
+filesys_create (const char *name, off_t initial_size)
 {
   //printf("filesys create\n");
   disk_sector_t inode_sector = 0;
@@ -62,32 +62,34 @@ filesys_create (const char *name, off_t initial_size)
   //hex_dump(0,name,15,true);
   //printf("name address:0x%08x\n",&name);
 
-  
+
   // free_map_allocate (1, &inode_sector);
   // printf("inode_sector:%d\n",inode_sector);
-  // printf("name:%s\n",name);  
+  // printf("name:%s\n",name);
 
   // inode_create (inode_sector, initial_size);
-  
-  // printf("flag2name3333333333333:%s\n",name);
+
+//  printf("flag2name:%s\n",name);
 
   // bool success=dir_add (dir, name, inode_sector);
   // printf("flag3444444444444444444444444name:%s\n",name);
-  
-  
-  
+
+
+
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size)
                   && dir_add (dir, name, inode_sector));
-  
 
-  //hex_dump(0,name,15,true);
+//  printf("succes:%d\n",success);
+
+
+//  hex_dump(0,name,15,true);
 
 
   //printf("sucesssssssssssssssssssssssssssssss\n");
 
-  if (!success && inode_sector != 0) 
+  if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
   dir_close (dir);
 
@@ -107,7 +109,7 @@ filesys_open (const char *name)
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
 
-  printf("filesys open filename:%s\n",name);
+//  printf("filesys open filename:%s\n",name);
   if (dir != NULL)
   {
     dir_lookup (dir, name, &inode);
@@ -123,13 +125,13 @@ filesys_open (const char *name)
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 bool
-filesys_remove (const char *name) 
+filesys_remove (const char *name)
 {
     //printf("filesys remove\n");
 
   struct dir *dir = dir_open_root ();
   bool success = dir != NULL && dir_remove (dir, name);
-  dir_close (dir); 
+  dir_close (dir);
 
   return success;
 }
