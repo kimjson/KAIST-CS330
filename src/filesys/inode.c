@@ -95,7 +95,7 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
 
     }
     else{
-      printf("double\n");
+      // printf("double\n");
       //double indirect block
       int index_no = (offset - 12)/128;
       int remainder = offset - 12 - 128*index_no;
@@ -108,7 +108,7 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
           //cache miss
         target_ce2 = cache_in(id->double_indirect_block);
       }
-      memcpy (&target_sector_no, &target_ce->block[4*index_no], 4);
+      memcpy (&target_sector_no, &target_ce2->block[4*index_no], 4);
 
       // target_sector_no = target_ce2->block[4*index_no];
       struct cache_entry *target_ce3 = cache_lookup(target_sector_no,false);
@@ -118,7 +118,7 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
       }
 
       disk_sector_t temp_sector;
-      memcpy (&temp_sector, &target_ce->block[4*remainder], 4);
+      memcpy (&temp_sector, &target_ce3->block[4*remainder], 4);
 
       return temp_sector;
 
@@ -269,7 +269,7 @@ inode_create (disk_sector_t sector, off_t length)
     // printf("\n\n");
     // printf("end\n\n");
 
-    hex_dump (0,indirect_index_block->block, 4*count, true);
+    // hex_dump (0,indirect_index_block->block, 4*count, true);
 
     indirect_index_block->is_dirty=true;
 

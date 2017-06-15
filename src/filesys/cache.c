@@ -25,7 +25,6 @@ cache_in(disk_sector_t first_sec_no){
 
 
 	if(list_size(&cache)>=64){
-		printf("eviction\n");
 		struct cache_entry* victim_Cache = list_entry(list_pop_front(&cache),struct cache_entry, list_elem);
 		cache_out(victim_Cache);
 	}
