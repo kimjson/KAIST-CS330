@@ -126,7 +126,7 @@ fsutil_put (char **argv)
     PANIC ("%s: open failed", file_name);
 
   
-  printf("fsutill flag1\n");
+ // printf("fsutill flag1\n");
 
   /* Do copy. */
   while (size > 0)

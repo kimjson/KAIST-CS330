@@ -53,38 +53,39 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size) 
 {
-  printf("filesys create\n");
+  //printf("filesys create\n");
   disk_sector_t inode_sector = 0;
   struct dir *dir = dir_open_root ();
-  printf("name:%s\n",name);
+  //printf("name:%s\n",name);
   // char * new_name;
   // strlcpy(new_name,name,15);
-  hex_dump(0,name,15,true);
-
+  //hex_dump(0,name,15,true);
+  //printf("name address:0x%08x\n",&name);
 
   
-  free_map_allocate (1, &inode_sector);
-  printf("flag1111111111111111111111name:%s\n",name);
+  // free_map_allocate (1, &inode_sector);
+  // printf("inode_sector:%d\n",inode_sector);
+  // printf("name:%s\n",name);  
 
-  inode_create (inode_sector, initial_size);
+  // inode_create (inode_sector, initial_size);
   
-    printf("flag2name3333333333333:%s\n",name);
+  // printf("flag2name3333333333333:%s\n",name);
 
-  bool success=dir_add (dir, name, inode_sector);
-  printf("flag3444444444444444444444444name:%s\n",name);
+  // bool success=dir_add (dir, name, inode_sector);
+  // printf("flag3444444444444444444444444name:%s\n",name);
   
   
   
-  // bool success = (dir != NULL
-                  // && free_map_allocate (1, &inode_sector)
-                  // && inode_create (inode_sector, initial_size)
-                  // && dir_add (dir, name, inode_sector));
+  bool success = (dir != NULL
+                  && free_map_allocate (1, &inode_sector)
+                  && inode_create (inode_sector, initial_size)
+                  && dir_add (dir, name, inode_sector));
   
 
-  hex_dump(0,name,15,true);
+  //hex_dump(0,name,15,true);
 
 
-  printf("sucesssssssssssssssssssssssssssssss\n");
+  //printf("sucesssssssssssssssssssssssssssssss\n");
 
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);

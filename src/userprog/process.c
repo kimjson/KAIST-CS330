@@ -69,8 +69,10 @@ start_process (void *f_name)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
+
   if (!success) {
     thread_current()->info->load_success = false;
     thread_exit();
@@ -341,6 +343,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
+
   char *fn_copy, *fn_copy2;
 
   fn_copy = (char *)malloc(sizeof(char)*MAX_CMD_SIZE);
@@ -362,6 +365,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   strlcpy(thread_current()->exec_name, token, strlen(token)+1);
   file = filesys_open (token);
   free(fn_copy);
+  //printf("opening file\n");
 
   if (file == NULL)
   {
@@ -446,10 +450,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
   }
 
+
   /* Set up stack. */
   if (!setup_stack_arg(fn_copy2, esp)) {
     goto done;
   }
+
+  
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;

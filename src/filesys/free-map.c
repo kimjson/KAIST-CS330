@@ -29,7 +29,7 @@ bool
 free_map_allocate (size_t cnt, disk_sector_t *sectorp) 
 {
   disk_sector_t sector= bitmap_scan_and_flip (free_map, 0, cnt, false);
-  printf("flag111 secotrs:%d\n",sector);
+  //printf("flag111 secotrs:%d\n",sector);
   if (sector != BITMAP_ERROR
       && free_map_file != NULL
       && !bitmap_write (free_map, free_map_file))
@@ -39,7 +39,7 @@ free_map_allocate (size_t cnt, disk_sector_t *sectorp)
     }
   if (sector != BITMAP_ERROR)
     *sectorp = sector;
-  printf("free_map_allocate end");
+  //printf("free_map_allocate end\n");
   return sector != BITMAP_ERROR;
 }
 

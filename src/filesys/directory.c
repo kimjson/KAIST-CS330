@@ -115,6 +115,7 @@ lookup (const struct dir *dir, const char *name,
         return true;
       }
     }
+  printf("lookup fail\n");
   return false;
 }
 
@@ -136,7 +137,7 @@ dir_lookup (const struct dir *dir, const char *name,
     *inode = NULL;
 
 
-  printf("lookup end\n");
+  //printf("lookup end\n");
   return *inode != NULL;
 }
 

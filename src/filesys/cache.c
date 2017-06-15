@@ -21,7 +21,7 @@ cache_in(disk_sector_t first_sec_no){
 	sema_down(&cache_sema);
 	/* check cache_length*/
 	struct cache_entry *ce;
-//	printf("cahce in sector_no:%d\n",first_sec_no);
+	//printf("cahce in sector_no:%d\n",first_sec_no);
 
 	
 	if(list_size(&cache)>=64){
