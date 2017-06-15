@@ -69,6 +69,7 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
 
 
     if(offset<12){
+      //  printf("direct\n");
       //  printf("return sector:%d\n",id->direct_block[offset]);
         return id->direct_block[offset];
     }
@@ -77,6 +78,8 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
         //printf("offset:%d\n",offset);
         //printf("print indirect:%d\n",id->indirect_block);
       //  printf("offset:%d\n",offset);
+        //printf("offset:%d\n",offset);
+      //  printf("block->inidrectblock:%d\n",id->indirect_block);
         target_ce = cache_lookup(id->indirect_block,false);
         if(target_ce == NULL){
           //cache miss
@@ -84,13 +87,15 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
         }
         //printf("return sector:%d\n",(disk_sector_t)(target_ce->block[4*(offset-12)]));
 
+        // hex_dump (0,  &target_ce->block[4*(offset-12)], 12,true);
         disk_sector_t temp_sector;
         memcpy (&temp_sector, &target_ce->block[4*(offset-12)], 4);
-
+        //printf("temp:%d\n",temp_sector);
         return temp_sector;
 
     }
     else{
+      printf("double\n");
       //double indirect block
       int index_no = (offset - 12)/128;
       int remainder = offset - 12 - 128*index_no;
@@ -103,7 +108,9 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
           //cache miss
         target_ce2 = cache_in(id->double_indirect_block);
       }
-      target_sector_no = target_ce2->block[4*index_no];
+      memcpy (&target_sector_no, &target_ce->block[4*index_no], 4);
+
+      // target_sector_no = target_ce2->block[4*index_no];
       struct cache_entry *target_ce3 = cache_lookup(target_sector_no,false);
       if(target_ce3==NULL){
         //cache miss
@@ -112,6 +119,7 @@ inode_byte_to_sector(struct inode *inode, off_t pos)
 
       disk_sector_t temp_sector;
       memcpy (&temp_sector, &target_ce->block[4*remainder], 4);
+
       return temp_sector;
 
 
@@ -160,12 +168,10 @@ inode_create (disk_sector_t sector, off_t length)
 
   size_t sectors = bytes_to_sectors (length);
   // printf("length:%d\n",length);
-  // printf("sectors:%d\n",sectors);
+//  printf("sectors:%d\n",sectors);
 
   disk_inode->magic = INODE_MAGIC;
   disk_inode->length = length;
-
-  //hex_dump();
 
 
   if(sectors>0){
@@ -176,13 +182,18 @@ inode_create (disk_sector_t sector, off_t length)
     static char zeros[DISK_SECTOR_SIZE];
 
     //direct blocks
-    if(sectors<12){count=sectors;}
+    if(sectors<12){
+      count=sectors;
+    }
     for(i=0;i<count;i++){
       if(!free_map_allocate(1,&sec_no)){
     //    printf("allocate false\n");
         return false;
       }
       disk_inode->direct_block[i] = sec_no;
+
+
+
       //printf("dixk:%d\n",disk_inode->direct_block[i]);
       struct cache_entry* target_ce = cache_lookup(sec_no,false);
       if(target_ce==NULL){
@@ -205,33 +216,60 @@ inode_create (disk_sector_t sector, off_t length)
     //indirect blocks
     if(sectors<140){
       count = sectors-12;
-    }else{count=128;}
+    }else{
+      count=128;
+    }
 
     //printf("inter count:%d\n",count);
     if(!free_map_allocate(1,&sec_no)){
   //    printf("allocate111 false\n");
 
-      return false;}
+      return false;
+    }
+
+    //printf("indirect block number:%d\n",sec_no);
 
     disk_inode->indirect_block = sec_no;
+    disk_sector_t indirect_no= sec_no;
     struct cache_entry* indirect_index_block = cache_lookup(disk_inode->indirect_block,false);
     if(indirect_index_block==NULL){
         indirect_index_block=cache_in(disk_inode->indirect_block);
     }
+//    memcpy(indirect_index_block->block,zeros,DISK_SECTOR_SIZE);
+
+
+  //  printf("indirect_index_block address:0x%08x\n",indirect_index_block->block);
 
     for(i=0;i<count;i++)
     {
         if(!free_map_allocate(1,&sec_no)){
+          //printf("fllag11111111\n");
+          return false;
+        }
 
-          return false;}
-        indirect_index_block->block[4*i]=sec_no;
+
+
+
         struct cache_entry* target_ce3 = cache_lookup(sec_no,false);
         if(target_ce3==NULL){
-            target_ce3 = cache_in(sec_no+i);
+            target_ce3 = cache_in(sec_no);
          }
         memcpy(target_ce3->block,zeros,DISK_SECTOR_SIZE);
         target_ce3->is_dirty=true;
+
+
+
+        indirect_index_block = cache_lookup(indirect_no,false);
+        if(indirect_index_block==NULL){
+            indirect_index_block = cache_in(indirect_no);
+         }
+        memcpy (&indirect_index_block->block[4*i],&sec_no, 4);
+        indirect_index_block->is_dirty =true;
     }
+    // printf("\n\n");
+    // printf("end\n\n");
+
+    hex_dump (0,indirect_index_block->block, 4*count, true);
 
     indirect_index_block->is_dirty=true;
 
@@ -250,21 +288,6 @@ inode_create (disk_sector_t sector, off_t length)
     }
 
 
-    //
-    // if(free_map_allocate(count,&sec_no)){
-    //
-    //   for(i=0;i<count;i++){
-    //     indirect_index_block->block[4*i]=sec_no+i;
-    //    // printf("indirect_index_block:%d\n",indirect_index_block->block[4*i]);
-    //     struct cache_entry* target_ce3 = cache_lookup(sec_no+i,false);
-    //     if(target_ce3==NULL){
-    //         target_ce3 = cache_in(sec_no+i);
-    //      }
-    //     memcpy(target_ce3->block,zeros,DISK_SECTOR_SIZE);
-    //     target_ce3->is_dirty=true;
-    //   }
-    // }else{return false;}
-
 
     //double indirect blocks
     count = sectors - 140;
@@ -278,33 +301,51 @@ inode_create (disk_sector_t sector, off_t length)
         double_indirect_index_block=cache_in(disk_inode->double_indirect_block);
     }
 
-  //  struct cache_entry *temp_ce;
     int index_no = 0;
+    disk_sector_t double_index_no=sec_no;
+
     while(1){
       temp_count = 128;
       if(count<128){temp_count = count;}
 
       free_map_allocate(1,&sec_no);
       //double_indirect_index_block->block[4*index_no] = sec_no;
-      double_indirect_index_block->block[4*index_no] = sec_no;
+
+      //double_indirect_index_block->block[4*index_no] = sec_no;
       struct cache_entry* target_ce5 = cache_lookup(sec_no,false);//index block
       if(target_ce5==NULL){
           target_ce5 = cache_in(sec_no);
       }
 
+      double_indirect_index_block = cache_lookup(double_index_no, false);
+      if(double_indirect_index_block==NULL){
+        double_indirect_index_block = cache_in(double_index_no);
+      }
+      memcpy (&double_indirect_index_block->block[4*index_no],&sec_no, 4);
+      double_indirect_index_block->is_dirty=true;
+
+      disk_sector_t middle_sec_no=sec_no;
+
+
       for(i=0;i<temp_count;i++)
       {
-          if(free_map_allocate(1,&sec_no)){
+          if(!free_map_allocate(1,&sec_no)){
             //printf("allocate false33333\n");
 
             return false;}
-          target_ce5->block[4*i]=sec_no;
+
           struct cache_entry* target_ce6 = cache_lookup(sec_no,false);
           if(target_ce6==NULL){
-              target_ce6 = cache_in(sec_no+i);
+              target_ce6 = cache_in(sec_no);
            }
           memcpy(target_ce6->block,zeros,DISK_SECTOR_SIZE);
           target_ce6->is_dirty=true;
+
+          target_ce5=cache_lookup(middle_sec_no, false);
+          if(target_ce5==NULL){
+            target_ce5 = cache_in(sec_no);
+          }
+          memcpy (&target_ce5->block[4*i],&sec_no, 4);
       }
       target_ce5->is_dirty=true;
       index_no++;
@@ -509,7 +550,11 @@ inode_close (struct inode *inode)
           if(target_ce==NULL){
             target_ce = cache_in(data->indirect_block);
           }
-          disk_sector_t target_sector_no = target_ce->block[0];
+          disk_sector_t target_sector_no;
+
+          memcpy (&target_sector_no, &target_ce->block[0], 4);
+
+          //disk_sector_t target_sector_no = target_ce->block[0];
           free_map_release (data->indirect_block, 1);
           free_map_release(target_sector_no,cnt);
           if(length<140){
@@ -531,7 +576,9 @@ inode_close (struct inode *inode)
           int temp_cnt;
           while(cnt>0){
             temp_cnt=128;
-            target_sector_no = target_ce->block[4*i];
+            // target_sector_no = target_ce->block[4*i];
+            memcpy (&target_sector_no, &target_ce->block[4*i], 4);
+
             if(cnt<128){
               temp_cnt=cnt;
             }
@@ -569,6 +616,7 @@ inode_remove (struct inode *inode)
 off_t
 inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
 {
+
  // printf("read at \n");
 
   uint8_t *buffer = buffer_;
@@ -591,7 +639,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       if (chunk_size <= 0)
         break;
 
-//      printf("read at inode_sector:%d\n",sector_idx);
+        // printf("read at inode_sector:%d\n",sector_idx);
 
 
       if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE)
@@ -665,7 +713,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   while (size > 0){
       /* Sector to write, starting byte offset within sector. */
       disk_sector_t sector_idx = inode_byte_to_sector (inode, offset);
-     // printf("sectoridx:%d\n",sector_idx);
+      //printf("sectoridx:%d\n",sector_idx);
       int sector_ofs = offset % DISK_SECTOR_SIZE;
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
       //printf("write inode_length:%d\n",inode_length(inode));

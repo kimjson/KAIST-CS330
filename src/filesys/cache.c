@@ -25,6 +25,7 @@ cache_in(disk_sector_t first_sec_no){
 
 
 	if(list_size(&cache)>=64){
+		printf("eviction\n");
 		struct cache_entry* victim_Cache = list_entry(list_pop_front(&cache),struct cache_entry, list_elem);
 		cache_out(victim_Cache);
 	}
@@ -34,20 +35,15 @@ cache_in(disk_sector_t first_sec_no){
 	ce->is_dirty = false;
 	disk_read(filesys_disk, first_sec_no, (void *)ce->block);
 	list_push_back(&cache, &ce->list_elem);
-
-
 	sema_up(&cache_sema);
 	return ce;
 }
 
 void
 cache_out(struct cache_entry *c){
-//	printf("cahce out sector_no:%d\n",c->first_sec_no);
 	if (c->is_dirty) {
 		// write to disk
-		// printf("writing sector_no:%d\n",c->first_sec_no);
 		disk_write(filesys_disk, c->first_sec_no, (void *)c->block);
-//		printf("writing_content:%s\n",c->block);
 	}
 	list_remove(&c->list_elem);
 	free(c);
