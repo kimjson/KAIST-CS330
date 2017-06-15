@@ -204,7 +204,7 @@ static void handle_remove(struct intr_frame *f) {
   if (!inode_is_directory(file_inode)) {
     f->eax = (uint32_t) filesys_remove(file);
     lock_release(&lock);
-  } else if (file_inode == dir_get_inode (thread_current()->curr_dir) || inode_open_cnt(file_inode) > 0) {
+  } else if (file_inode == dir_get_inode (thread_current()->curr_dir) || inode_open_cnt(file_inode) > 1) {
     // cannot remove current or open directory.
     // TODO: tell whether it's opened by other method than checking open_cnt.
     f->eax = (uint32_t) false;
