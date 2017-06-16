@@ -151,6 +151,7 @@ dir_reopen (struct dir *dir)
 void
 dir_close (struct dir *dir)
 {
+  // printf("dir close\n");
   if (dir != NULL)
     {
       inode_close (dir->inode);
@@ -217,8 +218,11 @@ dir_lookup (const struct dir *dir, const char *name,
     // printf("inode_sector: %d\n", e.inode_sector);
     *inode = inode_open (e.inode_sector);
   }
+
   else
-    *inode = NULL;
+    {
+      *inode = NULL;
+    }
 
 
   //printf("lookup end\n");
@@ -328,7 +332,8 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
       dir->pos += sizeof e;
       if (e.in_use && strcmp (e.name, ".") != 0 && strcmp(e.name, "..") != 0)
         {
-          // printf("e:%s\n",e.name);
+          printf("e:%s\n",e.name);
+          //printf("name:%s\n",name);
           strlcpy (name, e.name, NAME_MAX + 1);
           return true;
         }
@@ -387,3 +392,59 @@ dir_print_name (const struct dir *dir)
 // dir_print_name (struct dir *dir) {
 //   printf("name of dir: %s\n", dir_get_inode (dir))
 // }
+
+void 
+directory_shutdown(void){
+  struct dir* root =  dir_open_root();
+  char * path ="/";
+  directory_shutdown_rec(root,path);
+  printf("shutdown_end\n");
+}
+
+void 
+directory_shutdown_rec(struct dir* dir, char* path){
+    char name [NAME_MAX];
+    struct dir* temp_dir;
+    bool is_leaf = true;
+    printf("path:%s\n",path);
+
+    while(dir_readdir(dir,name)){
+        is_leaf = false;
+        printf("name:%s\n",name);
+        
+        char * mark ="/";
+        char* new_path = malloc(strlen(name)+strlen(path)+1+strlen(mark)); 
+        strlcpy(new_path, path, PATH_MAX); /* copy name into the new var */
+        strlcat(new_path,mark, 1);
+        strlcat(new_path, name, NAME_MAX);
+        temp_dir = dir_open_path(new_path);
+        directory_shutdown_rec(temp_dir,new_path);
+        free(new_path);
+
+    }
+    if(is_leaf){
+
+      // struct dir* parent_dir = dir_open_path("..");
+
+      dir_close(dir);
+
+
+    }
+}
+
+bool
+practical_dir_readdir (struct dir *dir, char * name)
+{
+  struct dir_entry e;
+  while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e)
+    {
+      dir->pos += sizeof e;
+      if (e.in_use && strcmp (e.name, ".") != 0 && strcmp(e.name, "..") != 0)
+        {
+          memcpy(name,e.name,strlen(e.name));
+          name[strlen(e.name)]='\0';
+          return true;
+        }
+    }
+  return false;
+}

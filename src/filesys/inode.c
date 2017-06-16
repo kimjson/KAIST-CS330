@@ -725,110 +725,299 @@ inode_get_inumber (const struct inode *inode)
 /* Closes INODE and writes it to disk.
    If this was the last reference to INODE, frees its memory.
    If INODE was also a removed inode, frees its blocks. */
+
 void
 inode_close (struct inode *inode)
 {
-//  printf("close inode:%d\n",inode->sector);
-
-  /* Ignore null pointer. */
+// printf("close inode:%d\n",inode->sector);
+ 
+/* Ignore null pointer. */
+   // printf("clsoe_flag0\n");
+ 
   if (inode == NULL)
+  {
+    // printf("flag11111111111111111111\n");
     return;
-
-  /* Release resources if this was the last opener. */
+  }
+ 
+    // printf("clsoe_flag0101\n");
+/* Release resources if this was the last opener. */
+  // printf("open_cnt:%d\n",inode->open_cnt);
   if (--inode->open_cnt == 0)
-    {
-      /* Remove from inode list and release lock. */
-      list_remove (&inode->elem);
+  { 
+  /* Remove from inode list and release lock. */
+    list_remove (&inode->elem);
+    // printf("closing_length:%d\n",length);
 
-  //    printf("close flag1\n");
-      /* Deallocate blocks if removed. */
-      if (inode->removed)
-        {
-    //      printf("close flag12\n");
-          int length;
-          int cnt;
-          int i;
-          struct cache_entry* target_ce = cache_lookup(inode->sector,false);
-          if(target_ce==NULL){
-            target_ce = cache_in(inode->sector);
-          }
-          struct inode_disk *data = (struct inode_disk*)target_ce->block;
-          length = bytes_to_sectors(data->length);
+ 
+    // printf("close flag1\n");
+/* Deallocate blocks if removed. */
+    if (inode->removed)
+  { 
+      // printf("close flag12\n");
+      int length;
+      int cnt;
+      int i;
+      struct cache_entry* target_ce = cache_lookup(inode->sector,false);
+      struct cache_entry* temp_ce;
+      if(target_ce==NULL){
+        target_ce = cache_in(inode->sector);
+      }
+      struct inode_disk *data = (struct inode_disk*)target_ce->block;
+      length = bytes_to_sectors(data->length);
+      disk_sector_t indirect_block = data->indirect_block;
+      disk_sector_t double_indirect_block = data->double_indirect_block;
+      
+      // printf("closing_length:%d\n",length);
+      if(length<12){
+        cnt=length;
+      }else{cnt=12;}
+ 
+// printf("close flag2\n");
+ 
+      // free_map_release (inode->sector, 1);
+      // temp_ce = cache_lookup(inode->sector,false);
+      // if(temp_ce!=NULL){
+      //   cache_out(temp_ce);
+      // }
 
-          if(length<12){
-            cnt=length;
-          }else{cnt=12;}
+      free_map_release (inode->sector, 1);
+      struct cahce_entry * last_ce = cache_lookup(inode->sector,false);
+      if(last_ce!=NULL){
+          cache_out(last_ce);
+      }
 
-      //    printf("close flag2\n");
-
-          free_map_release (inode->sector, 1);
-          for(i=0;i<cnt;i++){
-            free_map_release (data->direct_block[i], 1);
-          }
-          if(length<=12){
-              goto Done;
-          }
-
-    //    printf("close flag3\n");
-
-
-          //indirect block
-          if(length<=140){
-            cnt = length-12;
-          }else{cnt=128;}
-
-          target_ce = cache_lookup(data->indirect_block,false);
-          if(target_ce==NULL){
-            target_ce = cache_in(data->indirect_block);
-          }
-          disk_sector_t target_sector_no;
-
-          memcpy (&target_sector_no, &target_ce->block[0], 4);
-
-          //disk_sector_t target_sector_no = target_ce->block[0];
-          free_map_release (data->indirect_block, 1);
-          free_map_release(target_sector_no,cnt);
-          if(length<140){
-              goto Done;
-          }
-
-        //  printf("close flag4\n");
-
-
-          //double indirect block
-          cnt = length - 140;
-          target_ce = cache_lookup(data->double_indirect_block,false);
-          if(target_ce==NULL){
-            target_ce = cache_in(data->double_indirect_block);
-          }
-          i=0;
-        //  printf("close flag5\n");
-
-          int temp_cnt;
-          while(cnt>0){
-            temp_cnt=128;
-            // target_sector_no = target_ce->block[4*i];
-            memcpy (&target_sector_no, &target_ce->block[4*i], 4);
-
-            if(cnt<128){
-              temp_cnt=cnt;
-            }
-            free_map_release(target_sector_no,temp_cnt);
-            i++;
-            cnt = cnt-128;
-          }
-        //  printf("close flag6\n");
-
-          free_map_release (data->double_indirect_block, 1);
-
-          // free_map_release (inode->data.start,
-                            // bytes_to_sectors (inode->data.length));
+      for(i=0;i<cnt;i++){
+        free_map_release (data->direct_block[i], 1);
+        temp_ce = cache_lookup(data->direct_block[i],false);
+        if(temp_ce!=NULL){
+          cache_out(temp_ce);
         }
-    Done:
-    //  printf("close_flag7\n");
-      free (inode);
-    }
+      }
+
+
+      if(length<=12){
+        goto Done;
+      }
+ 
+// printf("close flag3\n");
+ 
+ 
+        //indirect block
+        if(length<=140){
+            cnt = length-12;
+        }else{cnt=128;}
+         
+        struct cache_entry * indirect_index_block = cache_lookup(indirect_block,false);
+        if(indirect_index_block==NULL){
+        target_ce = cache_in(indirect_block);
+        }
+        disk_sector_t target_sector_no;
+         
+        for(i=0;i<cnt;i++){
+         
+
+            memcpy (&target_sector_no, &indirect_index_block->block[4*i], 4);
+            free_map_release(target_sector_no,1);
+            temp_ce = cache_lookup(target_sector_no,false);
+            if(temp_ce!=NULL){
+                cache_out(temp_ce);
+            }
+        }
+        //disk_sector_t target_sector_no = target_ce->block[0];
+        free_map_release (indirect_block, 1);
+        cache_out(indirect_index_block);
+         
+        if(length<140){
+        goto Done;
+        }
+ 
+// printf("close flag4\n");
+ 
+         
+        //double indirect block
+        cnt = length - 140;
+        struct cache_entry * double_indirect_index_block= cache_lookup(double_indirect_block,false);
+        if(double_indirect_index_block==NULL){
+          double_indirect_index_block= cache_in(double_indirect_block);
+        }
+        i=0;
+         
+        int temp_cnt;
+        struct cache_entry* intermediate_index_block;
+        int index=0;
+        disk_sector_t second_target_sector_no;
+        while(cnt>0){
+        temp_cnt=128;
+        if(cnt<temp_cnt){
+          temp_cnt=cnt;
+        }
+        // target_sector_no = target_ce->block[4*i];
+        memcpy (&target_sector_no, &double_indirect_index_block->block[4*index], 4);
+        intermediate_index_block = cache_lookup(target_sector_no, false);
+        if(intermediate_index_block==NULL){
+          intermediate_index_block = cache_in(target_sector_no);
+        }
+ 
+ 
+ 
+        for(i=0;i<temp_cnt;i++){
+          memcpy (&second_target_sector_no, &intermediate_index_block->block[4*i], 4);
+          free_map_release(second_target_sector_no,1);
+          temp_ce = cache_lookup(second_target_sector_no,false);
+        if(temp_ce!=NULL){
+          cache_out(temp_ce);
+          }
+        }
+         
+        free_map_release(target_sector_no,temp_cnt);
+        temp_ce = cache_lookup(target_sector_no,false);
+        if(temp_ce!=NULL){
+        cache_out(temp_ce);
+        }
+         
+        index++;
+        cnt = cnt-128;
+        }
+// printf("close flag6\n");
+ 
+        free_map_release (double_indirect_block, 1);
+        temp_ce = cache_lookup(double_indirect_block,false);
+        if(temp_ce!=NULL){
+        cache_out(temp_ce);
+        }
+         
+        // free_map_release (inode->data.start,
+        // bytes_to_sectors (inode->data.length));
+        }
+        Done:;
+        // printf("clsoe_flag2\n");
+         
+        // printf("cl ose_flag7\n");
+        // free_map_release (inode->sector, 1);
+        // struct cache_entry* last_ce = cache_lookup(inode->sector,false);
+        // if(last_ce!=NULL){
+        //   cache_out(last_ce)
+        // }
+
+        
+        list_remove (&inode->elem);
+        free (inode);
+        // return true;
+        }
+        // return false;
 }
+
+
+
+
+// void
+// inode_close (struct inode *inode)
+// {
+// //  printf("close inode:%d\n",inode->sector);
+
+//   /* Ignore null pointer. */
+//   if (inode == NULL)
+//     return;
+
+//   /* Release resources if this was the last opener. */
+//   if (--inode->open_cnt == 0)
+//     {
+//       /* Remove from inode list and release lock. */
+//       list_remove (&inode->elem);
+
+//   //    printf("close flag1\n");
+//       /* Deallocate blocks if removed. */
+//       if (inode->removed)
+//         {
+//     //      printf("close flag12\n");
+//           int length;
+//           int cnt;
+//           int i;
+//           struct cache_entry* target_ce = cache_lookup(inode->sector,false);
+//           if(target_ce==NULL){
+//             target_ce = cache_in(inode->sector);
+//           }
+//           struct inode_disk *data = (struct inode_disk*)target_ce->block;
+//           disk_sector_t indirect_block = data->indirect_block;
+//           disk_sector_t double_indirect_block = data->double_indirect_block;
+
+//           length = bytes_to_sectors(data->length);
+
+//           if(length<12){
+//             cnt=length;
+//           }else{cnt=12;}
+
+
+//           free_map_release (inode->sector, 1);
+
+//           for(i=0;i<cnt;i++){
+//             free_map_release (data->direct_block[i], 1);
+
+//           }
+//           if(length<=12){
+//               goto Done;
+//           }
+
+
+
+//           //indirect block
+//           if(length<=140){
+//             cnt = length-12;
+//           }else{cnt=128;}
+
+//           target_ce = cache_lookup(data->indirect_block,false);
+//           if(target_ce==NULL){
+//             target_ce = cache_in(data->indirect_block);
+//           }
+//           disk_sector_t target_sector_no;
+
+//           memcpy (&target_sector_no, &target_ce->block[0], 4);
+
+//           //disk_sector_t target_sector_no = target_ce->block[0];
+//           free_map_release (data->indirect_block, 1);
+//           free_map_release(target_sector_no,cnt);
+//           if(length<140){
+//               goto Done;
+//           }
+
+//         //  printf("close flag4\n");
+
+
+//           //double indirect block
+//           cnt = length - 140;
+//           target_ce = cache_lookup(data->double_indirect_block,false);
+//           if(target_ce==NULL){
+//             target_ce = cache_in(data->double_indirect_block);
+//           }
+//           i=0;
+//         //  printf("close flag5\n");
+
+//           int temp_cnt;
+//           while(cnt>0){
+//             temp_cnt=128;
+//             // target_sector_no = target_ce->block[4*i];
+//             memcpy (&target_sector_no, &target_ce->block[4*i], 4);
+
+//             if(cnt<128){
+//               temp_cnt=cnt;
+//             }
+//             free_map_release(target_sector_no,temp_cnt);
+//             i++;
+//             cnt = cnt-128;
+//           }
+//         //  printf("close flag6\n");
+
+//           free_map_release (data->double_indirect_block, 1);
+
+//           // free_map_release (inode->data.start,
+//                             // bytes_to_sectors (inode->data.length));
+//         }
+//     Done:
+//     //  printf("close_flag7\n");
+//       free (inode);
+//     }
+// }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
    has it open. */

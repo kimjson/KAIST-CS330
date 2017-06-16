@@ -36,5 +36,10 @@ char *dir_split_name(char *);
 
 void dir_print_name(const struct dir *);
 
+void directory_shutdown(void);
+
+void directory_shutdown_rec(struct dir* dir, char* path);
+bool
+practical_dir_readdir (struct dir *dir, char * name);
 
 #endif /* filesys/directory.h */

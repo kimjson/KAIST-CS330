@@ -45,9 +45,12 @@ void
 filesys_done (void)
 {
 
+  directory_shutdown();
   cache_close();
   free_map_close ();
+
   //close all the directories and their entries.
+
 
 }
 
@@ -97,6 +100,7 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
+  // printf("opening flag\n");
   char *copied_name = malloc(strlen(name)+1);
   const char *file_name;
   struct dir *dir;
@@ -107,8 +111,8 @@ filesys_open (const char *name)
     return file_open(inode_open(ROOT_DIR_SECTOR));
   }
   file_name = dir_split_name(copied_name);
-  // printf("copied_name: %s\n", copied_name);
-  // printf("file_name: %s\n", file_name);
+   // printf("copied_name: %s\n", copied_name);
+   // printf("file_name: %s\n", file_name);
   if (strcmp(file_name, copied_name) != 0) {
     dir = dir_open_path(copied_name);
   } else if (!thread_current()->curr_dir){
@@ -117,6 +121,7 @@ filesys_open (const char *name)
   } else {
     dir = dir_reopen(thread_current()->curr_dir);
   }
+  // printf("flag111111111111111111111111\n");
   // printf("name of current working directory of thread: \n");
   // dir_print_name(thread_current()->curr_dir);
   // printf("name of new working directory: \n");
@@ -125,10 +130,14 @@ filesys_open (const char *name)
   // printf("file_name: %s\n", file_name);
   // printf("dir: 0x%08x\n", dir);
   if (dir != NULL) {
+      // printf("flag22222222222222222222222\n");
+
     // dir_lookup (dir_open_root(), file_name, &inode);
     dir_lookup (dir, file_name, &inode);
     // printf("inode: 0x%08x\n", inode);
     dir_close(dir);
+    // printf("flag3333333333333333333333\n");
+
     open_file = file_open(inode);
     // printf("open_file: 0x%08x\n", open_file);
     free(copied_name);

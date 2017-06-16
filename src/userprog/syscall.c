@@ -159,16 +159,26 @@ static void handle_create(struct intr_frame *f) {
   unsigned initial_size = *(unsigned *)(f->esp + 8);
   bool result = false;
 
+  // printf("creating flag\n");
+  // printf("initalsize:%d\n",initial_size);
+
   lock_acquire(&lock);
   if (is_invalid(file) || strlen(file) == 0) {
     //printf("file pointer invalid\n");
+    // printf("create flag0\n");
+    
     handle_invalid(f);
   } else if (strlen(file) > 14) {
+    // printf("create flag1\n");
+
     f->eax = (uint32_t)result;
   } else if (filesys_open(file) != NULL) {
+     // printf("create flag2\n");
+
     f->eax = (uint32_t)result;
   } else {
 
+    // printf("create flag3\n");
     result = filesys_create(file, initial_size);
     f->eax = (uint32_t)result;
   }
