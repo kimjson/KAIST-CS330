@@ -8,7 +8,8 @@
 #include "filesys/directory.h"
 #include "devices/disk.h"
 #include "filesys/cache.h"
-#include "filesys/cache.c"
+#include "threads/thread.h"
+// #include "filesys/cache.c"
 
 /* The disk that contains the file system. */
 struct disk *filesys_disk;

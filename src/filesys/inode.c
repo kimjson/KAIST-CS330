@@ -1109,12 +1109,24 @@ inode_length (const struct inode *inode)
 bool
 inode_is_directory(struct inode *inode) {
   // printf("0x%08x is directory: %d\n", inode, inode->data.is_directory);
-  return inode->data.is_directory;
+  struct cache_entry *ce = cache_lookup(inode->sector, false);
+  if (!ce) {
+    ce = cache_in(inode->sector);
+  }
+  struct inode_disk *disk_inode = (struct inode_disk *) ce->block;
+  return disk_inode->is_directory;
 }
 
 void
 inode_set_directory(struct inode *inode, bool b) {
-  inode->data.is_directory = b;
+  struct cache_entry *ce = cache_lookup(inode->sector, false);
+  if (!ce) {
+    ce = cache_in(inode->sector);
+  }
+  struct inode_disk *disk_inode = (struct inode_disk *) ce->block;
+  disk_inode->is_directory = b;
+  // disk_inode->is_dirty = true;
+  ce->is_dirty = true;
 }
 
 int
