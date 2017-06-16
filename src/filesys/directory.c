@@ -332,8 +332,7 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
       dir->pos += sizeof e;
       if (e.in_use && strcmp (e.name, ".") != 0 && strcmp(e.name, "..") != 0)
         {
-          printf("e:%s\n",e.name);
-          //printf("name:%s\n",name);
+          //printf("e:%s\n",e.name);
           strlcpy (name, e.name, NAME_MAX + 1);
           return true;
         }
@@ -398,7 +397,7 @@ directory_shutdown(void){
   struct dir* root =  dir_open_root();
   char * path ="/";
   directory_shutdown_rec(root,path);
-  printf("shutdown_end\n");
+ //printf("shutdown_end\n");
 }
 
 void 
@@ -409,14 +408,17 @@ directory_shutdown_rec(struct dir* dir, char* path){
     printf("path:%s\n",path);
 
     while(dir_readdir(dir,name)){
-        is_leaf = false;
+       
+        if(strlen(name)==1){break;}
+         is_leaf = false;
         printf("name:%s\n",name);
-        
+        printf("path:%s\n",path);
+        printf("namelenth:%d\n",strlen(name));
         char * mark ="/";
         char* new_path = malloc(strlen(name)+strlen(path)+1+strlen(mark)); 
         strlcpy(new_path, path, PATH_MAX); /* copy name into the new var */
         strlcat(new_path,mark, 1);
-        strlcat(new_path, name, NAME_MAX);
+        strlcat(new_path, name, 40);
         temp_dir = dir_open_path(new_path);
         directory_shutdown_rec(temp_dir,new_path);
         free(new_path);
